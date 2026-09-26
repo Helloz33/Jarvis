@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import ollama
 
+from Tools import (
+    SANDBOX,
+    create_file,
+    delete_file,
+    edit_file,
+    list_files,
+    read_file,
+    run_python,
+)
+
 MODEL = "qwen2.5-coder:7b"
-SANDBOX = (Path.home() / "Jarvis" / "test").resolve()
 MAX_TOOL_CALLS = 8
 
 
 SYSTEM_PROMPT = f"""
-You are Jarvis V0.1, a simple local file assistant.
+You are Jarvis V0.1.1, a simple local file assistant.
 
 You may ONLY access files through the provided tools, and only inside:
 {SANDBOX}
@@ -24,113 +32,18 @@ Rules:
 - Do not list/read a file just to verify a successful create or edit.
 - Do not edit or delete unless the user explicitly asks.
 - Never delete a file just to recreate or "fix" it.
-- If a write tool succeeds, give the user the result instead of making more tool calls.
+- If a write tool (create_file, edit_file, delete_file) succeeds, give the
+  user the result instead of making more tool calls.
+- run_python can execute a .py file that already exists in the sandbox, so
+  you can check that code you wrote actually works before reporting back.
 """
-
-
-def safe_path(relative_path: str, must_exist: bool = False) -> Path:
-    """Resolve a relative path and prove it stays inside the sandbox."""
-    if not isinstance(relative_path, str) or not relative_path.strip():
-        raise ValueError("Path must be a non-empty relative path.")
-
-    raw = Path(relative_path).expanduser()
-
-    if raw.is_absolute():
-        raise ValueError("Absolute paths are not allowed.")
-
-    target = (SANDBOX / raw).resolve(strict=False)
-
-    try:
-        target.relative_to(SANDBOX)
-    except ValueError as exc:
-        raise ValueError("Path is outside the testing/ sandbox.") from exc
-
-    if must_exist and not target.exists():
-        raise FileNotFoundError(f"{relative_path} does not exist.")
-
-    return target
-
-
-def list_files() -> str:
-    """List files and directories directly inside testing/."""
-    try:
-        items = []
-        for path in sorted(SANDBOX.iterdir(), key=lambda p: p.name.lower()):
-            kind = "dir" if path.is_dir() else "file"
-            items.append(f"{kind}: {path.name}")
-        return "\n".join(items) if items else "testing/ is empty."
-    except PermissionError:
-        return "Error: permission denied."
-
-
-def read_file(path: str) -> str:
-    """Read a UTF-8 text file inside testing/."""
-    try:
-        target = safe_path(path, must_exist=True)
-        if target.is_dir():
-            return "Error: that path is a directory."
-        return target.read_text(encoding="utf-8")
-    except (ValueError, FileNotFoundError, PermissionError, UnicodeDecodeError) as exc:
-        return f"Error: {exc}"
-
-
-def create_file(path: str, content: str) -> str:
-    """Create a new file without overwriting an existing file."""
-    try:
-        target = safe_path(path)
-
-        if target.exists():
-            return f"Error: {path} already exists. It was NOT overwritten."
-
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
-        return f"Created testing/{target.relative_to(SANDBOX)}"
-    except (ValueError, PermissionError, OSError) as exc:
-        return f"Error: {exc}"
-
-
-def edit_file(path: str, content: str) -> str:
-    """Replace the contents of an existing text file."""
-    try:
-        target = safe_path(path, must_exist=True)
-
-        if target.is_dir():
-            return "Error: that path is a directory."
-
-        target.write_text(content, encoding="utf-8")
-        return f"Edited testing/{target.relative_to(SANDBOX)}"
-    except (ValueError, FileNotFoundError, PermissionError, OSError) as exc:
-        return f"Error: {exc}"
-
-
-def delete_file(path: str) -> str:
-    """Delete one file after explicit confirmation."""
-    try:
-        target = safe_path(path, must_exist=True)
-
-        if target.is_dir():
-            return "Error: deleting directories is not supported."
-
-        relative = target.relative_to(SANDBOX)
-        answer = input(
-            f'Jarvis wants to delete "testing/{relative}". Continue? [y/N]: '
-        ).strip().lower()
-
-        if answer not in {"y", "yes"}:
-            return "Deletion cancelled by the user. Do not retry the deletion."
-
-        target.unlink()
-        return f"Deleted testing/{relative}"
-    except (ValueError, FileNotFoundError, PermissionError, OSError) as exc:
-        return f"Error: {exc}"
-
 
 TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "list_files",
-            "description": "List files and directories inside testing/.",
+            "description": "List files and directories inside Test/.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -138,7 +51,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": "Read a text file inside testing/. Use a relative path.",
+            "description": "Read a text file inside Test/. Use a relative path.",
             "parameters": {
                 "type": "object",
                 "properties": {"path": {"type": "string"}},
@@ -150,7 +63,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_file",
-            "description": "Create a new text file inside testing/. Never overwrite an existing file.",
+            "description": "Create a new text file inside Test/. Never overwrite an existing file.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -165,7 +78,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "edit_file",
-            "description": "Replace the contents of an existing text file inside testing/.",
+            "description": "Replace the contents of an existing text file inside Test/.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -180,10 +93,36 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "delete_file",
-            "description": "Delete a file inside testing/. Always ask the user for confirmation.",
+            "description": "Delete a file inside Test/. Always ask the user for confirmation.",
             "parameters": {
                 "type": "object",
                 "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_python",
+            "description": (
+                "Run an existing .py file inside Test/ and return its exit "
+                "code, stdout, and stderr."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "args": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional command-line arguments to pass to the script.",
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Optional timeout in seconds (default 10).",
+                    },
+                },
                 "required": ["path"],
             },
         },
@@ -196,6 +135,7 @@ FUNCTIONS = {
     "create_file": create_file,
     "edit_file": edit_file,
     "delete_file": delete_file,
+    "run_python": run_python,
 }
 
 
@@ -276,6 +216,9 @@ def run_turn(user_text: str) -> str:
             # Once a write/delete operation succeeds, end this turn.
             # This prevents the small model from doing:
             # create -> list -> read -> edit -> delete -> recreate...
+            # run_python is not in this set, since it doesn't write anything
+            # and the model may reasonably want to create a file and then
+            # run it in the same turn.
             if name in {"create_file", "edit_file", "delete_file"}:
                 if result.startswith(
                     ("Created ", "Edited ", "Deleted ", "Deletion cancelled")
@@ -309,7 +252,7 @@ def main() -> None:
     """Start the interactive Jarvis terminal."""
     SANDBOX.mkdir(parents=True, exist_ok=True)
 
-    print("Jarvis V0.1")
+    print("Jarvis V0.1.1")
     print(f"Model:   {MODEL}")
     print(f"Sandbox: {SANDBOX}")
     print("Type 'exit' or 'quit' to close.\n")
