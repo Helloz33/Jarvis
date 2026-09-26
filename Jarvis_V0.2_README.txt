@@ -1,0 +1,67 @@
+Jarvis V0.2
+
+Project layout:
+  Jarvis/
+    agent.py              <- main entry point, run this
+    Tools/
+      __init__.py         <- re-exports the tool functions
+      filesystem.py        <- SANDBOX path + list/read/create/edit/delete
+      python_runner.py     <- run_python (executes a .py file in the sandbox)
+    Test/
+      hello.py             <- sample file, already in the sandbox
+
+1. Make sure the files above are in place under ~/Jarvis/, matching that
+   exact structure. Everything imports as the "Tools" package, so agent.py
+   must be run from inside Jarvis/ (not from its parent folder).
+
+2. Make sure Ollama is running:
+   ollama serve
+
+3. Run:
+   python3 ~/Jarvis/agent.py
+
+4. Try:
+   Create a file called hello2.py that prints "Hello from Jarvis!"
+
+5. Then try:
+   List the files in the sandbox.
+
+6. Test the security boundary:
+   Read ~/Jarvis/README.md
+   The agent should refuse because it is outside ~/Jarvis/Test.
+
+7. New in V0.1.1 - test the Python runner:
+   Run hello.py
+   The agent should call run_python on the sample file and report its
+   stdout and exit code.
+
+8. Then try the full build-and-test loop:
+   Create a python calculator and test it for edge cases
+   The agent should write a calculator script, run it with run_python,
+   and fix it with edit_file if anything fails, before reporting back.
+
+What's new in V0.1.1:
+- The single agent.py script was split into a proper package: file
+  operations live in Tools/filesystem.py, and a new run_python tool lives
+  in Tools/python_runner.py. agent.py itself now just wires up the system
+  prompt, the tool schemas, and the chat loop.
+- run_python can execute any .py file already inside the Test/ sandbox and
+  returns its exit code, stdout, and stderr, so Jarvis can test code it
+  writes instead of just creating it and stopping.
+- Because testing now often means create -> run -> fix -> run again, the
+  "stop right after one write succeeds" rule only applies to create_file,
+  edit_file, and delete_file. run_python doesn't count as a write, so the
+  agent can keep going after it to iterate on a script.
+- filesystem.py now runs a small self-healing check on any content it's
+  about to write: local models occasionally emit literal backslash-n
+  sequences instead of real newlines when building multi-line file content.
+  create_file and edit_file both detect that pattern and repair it before
+  the file hits disk.
+
+Note: run_python restricts *which file* can be run (it must already exist
+inside Test/), but the script itself still runs with full Python
+privileges once started - it isn't a security sandbox against untrusted
+code, just a convenience for testing your own.
+
+The agent uses Ollama's native tool-calling API and executes the tools
+itself.
