@@ -1,0 +1,21 @@
+Jarvis V0.1
+
+1. Copy jarvis_agent.py into ~/Jarvis/test/agent.py
+
+2. Make sure Ollama is running:
+   ollama serve
+
+3. Run:
+   python3 ~/Jarvis/test/agent.py
+
+4. Try:
+   Create a file called hello.py that prints "Hello from Jarvis!"
+
+5. Then try:
+   List the files in the sandbox.
+
+6. Test the security boundary:
+   Read ~/Jarvis/README.md
+   The agent should refuse because it is outside ~/Jarvis/test.
+
+The agent uses Ollama's native tool-calling API and executes the filesystem tools itself.
