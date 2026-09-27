@@ -20,7 +20,7 @@ MAX_TOOL_CALLS = 8
 
 
 SYSTEM_PROMPT = f"""
-You are Jarvis V0.1.1, a simple local file assistant.
+You are Jarvis V0.2, a simple local file assistant.
 
 You may ONLY access files through the provided tools, and only inside:
 {SANDBOX}
