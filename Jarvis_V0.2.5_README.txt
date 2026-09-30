@@ -1,0 +1,145 @@
+Jarvis V0.2.5
+A local coding and research assistant built around Ollama, with filesystem tools, a controlled Python runner, and Tavily web search.
+
+Project layout
+Jarvis/
+├── Agent.py                 <- main entry point and Ollama tool-calling loop
+├── Tools/
+│   ├── __init__.py          <- re-exports the tool functions
+│   ├── filesystem.py        <- sandbox path + list/read/create/edit/delete
+│   ├── python_runner.py     <- run_python for Python files in Test/
+│   └── web_search.py        <- web_search using Tavily
+└── Test/
+    └── hello.py             <- sample file in the sandbox
+Jarvis should be run from inside the Jarvis/ directory so the Tools package imports correctly.
+
+What Jarvis can do
+List files inside the Test/ sandbox.
+
+Read text files inside the sandbox.
+
+Create new files without overwriting existing files.
+
+Edit existing files.
+
+Delete files with confirmation.
+
+Run existing .py files inside the sandbox with run_python.
+
+Search the internet with web_search through Tavily.
+
+Use Ollama's native tool-calling loop to combine multiple tools in one request.
+
+Requirements
+Python
+
+Ollama
+
+qwen2.5-coder:7b
+
+tavily-python
+
+A Tavily API key for web search
+
+Setup
+1. Start Ollama
+ollama serve
+Make sure the model is installed:
+
+ollama pull qwen2.5-coder:7b
+2. Install the Python dependencies
+From the Jarvis directory:
+
+python -m pip install ollama tavily-python
+3. Set the Tavily API key
+The current web-search tool reads the key from the TAVILY_API_KEY environment variable.
+
+For the current terminal session:
+
+export TAVILY_API_KEY="YOUR_TAVILY_API_KEY"
+Do not put the API key directly into Agent.py, web_search.py, or any file that will be committed to GitHub.
+
+If you later switch Jarvis to automatic .env loading or macOS Keychain storage, update this setup section to match the new secret-management system.
+
+Run Jarvis
+From inside ~/Jarvis/:
+
+python Agent.py
+You should see something like:
+
+Jarvis V0.2.5
+Model:   qwen2.5-coder:7b
+Sandbox: .../Jarvis/Test
+Type 'exit' or 'quit' to close.
+Test the filesystem tools
+Try:
+
+Create a file called hello2.py that prints "Hello from Jarvis!"
+Then:
+
+List the files in the sandbox.
+Test the Python runner
+Try:
+
+Run hello.py
+Jarvis should call run_python and report the script's exit code, stdout, and stderr.
+
+You can also test the build-and-test loop:
+
+Create a Python calculator and test it for edge cases.
+Jarvis can create the script, run it with run_python, and use edit_file to fix problems when the test fails.
+
+Test the web search tool
+Try:
+
+Search the web for the official Python asyncio documentation.
+Jarvis should call web_search, send the query to Tavily, and use the returned results to answer.
+
+The current Tavily implementation uses a basic search with up to five returned results per request.
+
+Security model
+Jarvis does not provide arbitrary shell execution.
+
+Filesystem tools are restricted to the Test/ sandbox. Requests that escape the sandbox should be rejected by the filesystem safety checks.
+
+run_python only accepts an existing .py file inside Test/. It is a controlled Jarvis tool, but it is not a security sandbox for untrusted Python code: once a script starts, Python itself has normal process privileges.
+
+Web search is separate from filesystem access. web_search can search the public internet through Tavily, but it does not give the model arbitrary browser or computer control.
+
+Tool architecture
+Agent.py contains the system prompt, Ollama tool schemas, function mapping, and tool-calling loop.
+
+Tools/filesystem.py contains filesystem operations and sandbox enforcement.
+
+Tools/python_runner.py contains the controlled Python execution tool.
+
+Tools/web_search.py contains the Tavily integration.
+
+Tools/__init__.py re-exports the tools so Agent.py can import them from Tools.
+
+What's new in V0.2.5
+Added modular web research through web_search.
+
+Added Tavily integration for current internet information, documentation, research, and news.
+
+Kept filesystem operations inside the existing Test/ sandbox.
+
+Kept run_python as a separate tool so Jarvis can write code and test it instead of only creating files.
+
+The tool loop supports both Ollama's native tool-call format and the JSON tool-call fallback used by some local Qwen/Ollama combinations.
+
+Write operations still have a safety stop after a successful create_file, edit_file, or delete_file, while run_python and web_search can continue within the tool-call limit.
+
+Important development notes
+Keep API keys out of source code and out of Git history.
+
+Before committing changes:
+
+git status
+git add .
+git commit -m "Describe the change"
+git push
+For major milestones, create a Git tag so older versions remain easy to identify.
+
+Current version
+V0.2.5 — Modular tools + Python execution + web search

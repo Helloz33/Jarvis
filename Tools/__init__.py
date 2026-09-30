@@ -1,3 +1,7 @@
+from .python_runner import run_python
+
+from .web_search import web_search
+
 from .filesystem import (
     SANDBOX,
     create_file,
@@ -7,7 +11,6 @@ from .filesystem import (
     read_file,
     safe_path,
 )
-from .python_runner import run_python
 
 __all__ = [
     "SANDBOX",
@@ -18,4 +21,5 @@ __all__ = [
     "edit_file",
     "delete_file",
     "run_python",
+    "web_search"
 ]
