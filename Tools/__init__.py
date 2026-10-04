@@ -2,6 +2,10 @@ from .python_runner import run_python
 
 from .web_search import web_search
 
+from .speech_to_text import listen
+
+from .text_to_speech import speak
+
 from .filesystem import (
     SANDBOX,
     create_file,
@@ -21,5 +25,7 @@ __all__ = [
     "edit_file",
     "delete_file",
     "run_python",
-    "web_search"
+    "web_search",
+    "listen",
+    "speak",
 ]

@@ -1,5 +1,5 @@
-Jarvis V0.2.5
-A local coding and research assistant built around Ollama, with filesystem tools, a controlled Python runner, and Tavily web search.
+Jarvis V0.3
+A local coding and research assistant built around Ollama, with filesystem tools, a controlled Python runner, Tavily web search, and voice input/output.
 
 Project layout
 Jarvis/
@@ -8,9 +8,11 @@ Jarvis/
 │   ├── __init__.py          <- re-exports the tool functions
 │   ├── filesystem.py        <- sandbox path + list/read/create/edit/delete
 │   ├── python_runner.py     <- run_python for Python files in Test/
-│   └── web_search.py        <- web_search using Tavily
+│   ├── web_search.py        <- web_search using Tavily
+│   ├── speech_to_text.py    <- listen, microphone -> text via Google Web Speech
+│   └── text_to_speech.py    <- speak, text -> audio via pyttsx3
 └── Test/
-    └── hello.py             <- sample file in the sandbox
+    └── hello.py              <- sample file in the sandbox
 Jarvis should be run from inside the Jarvis/ directory so the Tools package imports correctly.
 
 What Jarvis can do
@@ -28,6 +30,10 @@ Run existing .py files inside the sandbox with run_python.
 
 Search the internet with web_search through Tavily.
 
+Listen to a spoken phrase and turn it into text with the "voice" command.
+
+Speak its replies back out loud.
+
 Use Ollama's native tool-calling loop to combine multiple tools in one request.
 
 Requirements
@@ -41,17 +47,32 @@ tavily-python
 
 A Tavily API key for web search
 
+SpeechRecognition
+
+pyaudio (requires the portaudio system library)
+
+pyttsx3
+
+An internet connection for speech recognition (Google Web Speech API) and for web_search
+
+A working microphone, and speakers for spoken replies
+
 Setup
 1. Start Ollama
 ollama serve
 Make sure the model is installed:
 
 ollama pull qwen2.5-coder:7b
-2. Install the Python dependencies
+
+2. Install the system dependency for microphone input (macOS)
+brew install portaudio
+
+3. Install the Python dependencies
 From the Jarvis directory:
 
-python -m pip install ollama tavily-python
-3. Set the Tavily API key
+python -m pip install ollama tavily-python SpeechRecognition pyaudio pyttsx3
+
+4. Set the Tavily API key
 The current web-search tool reads the key from the TAVILY_API_KEY environment variable.
 
 For the current terminal session:
@@ -67,10 +88,11 @@ From inside ~/Jarvis/:
 python Agent.py
 You should see something like:
 
-Jarvis V0.2.5
+Jarvis V0.3
 Model:   qwen2.5-coder:7b
 Sandbox: .../Jarvis/Test
-Type 'exit' or 'quit' to close.
+Type 'exit' or 'quit' to close. Type 'voice' to speak instead.
+
 Test the filesystem tools
 Try:
 
@@ -78,6 +100,7 @@ Create a file called hello2.py that prints "Hello from Jarvis!"
 Then:
 
 List the files in the sandbox.
+
 Test the Python runner
 Try:
 
@@ -97,6 +120,17 @@ Jarvis should call web_search, send the query to Tavily, and use the returned re
 
 The current Tavily implementation uses a basic search with up to five returned results per request.
 
+Test voice input and output
+At the "You:" prompt, type:
+
+voice
+Jarvis will print "Listening... (speak now)" and give you 5 seconds to start talking, capturing up to 15 seconds of speech. Try saying:
+
+List the files in the sandbox.
+Jarvis should print what it heard, run the request as normal, and speak its reply back out loud.
+
+If nothing is heard in time, or the audio can't be understood, Jarvis will say so and let you try again rather than sending an empty request.
+
 Security model
 Jarvis does not provide arbitrary shell execution.
 
@@ -106,8 +140,10 @@ run_python only accepts an existing .py file inside Test/. It is a controlled Ja
 
 Web search is separate from filesystem access. web_search can search the public internet through Tavily, but it does not give the model arbitrary browser or computer control.
 
+Voice input only activates when you explicitly type "voice" at the prompt. Jarvis does not listen continuously or record in the background.
+
 Tool architecture
-Agent.py contains the system prompt, Ollama tool schemas, function mapping, and tool-calling loop.
+Agent.py contains the system prompt, Ollama tool schemas, function mapping, and tool-calling loop. It also owns the "voice" command in the input loop and the call to speak() on each reply, since listening and speaking are driven by the user/terminal, not by the model choosing to call a tool.
 
 Tools/filesystem.py contains filesystem operations and sandbox enforcement.
 
@@ -115,14 +151,27 @@ Tools/python_runner.py contains the controlled Python execution tool.
 
 Tools/web_search.py contains the Tavily integration.
 
+Tools/speech_to_text.py contains the microphone listening and transcription logic.
+
+Tools/text_to_speech.py contains the local text-to-speech engine wrapper.
+
 Tools/__init__.py re-exports the tools so Agent.py can import them from Tools.
 
-What's new in V0.2.5
+What's new in V0.3
+Added voice input through Tools/speech_to_text.py: typing "voice" records a phrase from the microphone and transcribes it with the Google Web Speech API.
+
+Added voice output through Tools/text_to_speech.py: Jarvis now speaks every reply out loud using pyttsx3, in addition to printing it.
+
+listen() and speak() are plain input-loop helpers, not Ollama tools the model calls itself, since they're triggered by the user talking or by Jarvis finishing a reply, not by model decision.
+
+Kept filesystem operations inside the existing Test/ sandbox.
+
+Kept run_python and web_search as before, with the same stop-on-write-success / continue-on-read-or-search behavior.
+
+What's new in V0.2.5 (for reference)
 Added modular web research through web_search.
 
 Added Tavily integration for current internet information, documentation, research, and news.
-
-Kept filesystem operations inside the existing Test/ sandbox.
 
 Kept run_python as a separate tool so Jarvis can write code and test it instead of only creating files.
 
@@ -142,4 +191,4 @@ git push
 For major milestones, create a Git tag so older versions remain easy to identify.
 
 Current version
-V0.2.5 — Modular tools + Python execution + web search
+V0.3 — Modular tools + Python execution + web search + voice input/output

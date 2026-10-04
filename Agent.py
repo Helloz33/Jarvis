@@ -4,6 +4,9 @@ import json
 from typing import Any
 
 import ollama
+from dotenv import load_dotenv
+
+load_dotenv()  # reads .env in the current directory, if present
 
 from Tools import (
     SANDBOX,
@@ -11,8 +14,10 @@ from Tools import (
     delete_file,
     edit_file,
     list_files,
+    listen,
     read_file,
     run_python,
+    speak,
     web_search,
 )
 
@@ -360,23 +365,50 @@ def main() -> None:
 
     SANDBOX.mkdir(parents=True, exist_ok=True)
 
-    print("Jarvis V0.2.5")
+    print("Jarvis V0.3")
     print(f"Model:   {MODEL}")
     print(f"Sandbox: {SANDBOX}")
-    print("Type 'exit' or 'quit' to close.\n")
+    print(
+        "Type 'exit', 'quit', or 'bye' to close. Type 'voice' as your first "
+        "message to stay in voice mode for the rest of this chat.\n"
+    )
 
     if not check_ollama():
         return
 
+    EXIT_WORDS = {"exit", "quit", "bye"}
+    voice_mode = False
+
     while True:
         try:
-            user_text = input("You: ").strip()
+            if voice_mode:
+                user_text = listen()
+
+                if not user_text:
+                    print("Jarvis: Didn't catch that, try again.")
+                    continue
+
+                print(f"You (voice): {user_text}")
+            else:
+                user_text = input("You: ").strip()
 
         except (KeyboardInterrupt, EOFError):
             print("\nGoodbye.")
             break
+        except RuntimeError as exc:
+            # listen() raises this if the mic/service itself is unreachable.
+            print(f"Jarvis error: {exc}")
+            continue
 
-        if user_text.lower() in {"exit", "quit"}:
+        if user_text.lower() == "voice" and not voice_mode:
+            voice_mode = True
+            print(
+                "Voice mode on for the rest of this chat. "
+                "Say 'exit', 'quit', or 'bye' to end.\n"
+            )
+            continue
+
+        if user_text.lower() in EXIT_WORDS:
             print("Goodbye.")
             break
 
@@ -384,7 +416,9 @@ def main() -> None:
             continue
 
         try:
-            print(f"Jarvis: {run_turn(user_text)}")
+            reply = run_turn(user_text)
+            print(f"Jarvis: {reply}")
+            speak(reply)
 
         except Exception as exc:
             print(f"Jarvis error: {exc}")
