@@ -14,6 +14,7 @@ from .filesystem import (
     list_files,
     read_file,
     safe_path,
+    set_confirm_handler,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "web_search",
     "listen",
     "speak",
+    "set_confirm_handler",
 ]

@@ -5,3 +5,5 @@ venv/
 env/
 .env
 .DS_Store
+logs/
+logs/

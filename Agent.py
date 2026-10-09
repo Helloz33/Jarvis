@@ -322,6 +322,7 @@ def run_turn(user_text: str) -> str:
                         "Edited ",
                         "Deleted ",
                         "Deletion cancelled",
+                        "Edit cancelled",
                     )
                 ):
                     return result + "."

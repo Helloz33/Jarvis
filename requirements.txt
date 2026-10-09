@@ -1,0 +1,9 @@
+ollama
+tavily-python
+python-dotenv
+SpeechRecognition
+pyaudio
+pyttsx3
+fastapi
+uvicorn[standard]
+pywebview

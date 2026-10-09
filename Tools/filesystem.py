@@ -1,9 +1,31 @@
 from __future__ import annotations
 
+import difflib
 from pathlib import Path
 
 # Jarvis/Tools/filesystem.py -> parent is Jarvis/Tools -> parent.parent is Jarvis/
 SANDBOX = (Path(__file__).resolve().parent.parent / "Test").resolve()
+
+
+# --- Confirmation hook -------------------------------------------------
+# The UI registers a handler so edits/deletes show the Yes/No popup.
+# With no handler (plain terminal use) we fall back to input().
+_confirm_handler = None
+
+
+def set_confirm_handler(handler) -> None:
+    """handler(action, path, detail) -> bool"""
+    global _confirm_handler
+    _confirm_handler = handler
+
+
+def _confirm(action: str, relative: str, detail: str = "") -> bool:
+    if _confirm_handler is not None:
+        return bool(_confirm_handler(action, relative, detail))
+    answer = input(
+        f'Jarvis wants to {action} "Test/{relative}". Continue? [y/N]: '
+    ).strip().lower()
+    return answer in {"y", "yes"}
 
 
 def _normalize_content(content: str) -> str:
@@ -88,8 +110,22 @@ def edit_file(path: str, content: str) -> str:
         if target.is_dir():
             return "Error: that path is a directory."
 
-        target.write_text(_normalize_content(content), encoding="utf-8")
-        return f"Edited Test/{target.relative_to(SANDBOX)}"
+        relative = target.relative_to(SANDBOX)
+        new = _normalize_content(content)
+        try:
+            old = target.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            old = ""
+
+        diff_lines = list(difflib.unified_diff(
+            old.splitlines(), new.splitlines(), "before", "after", lineterm="", n=2))
+        detail = "\n".join(diff_lines[:40]) or "(no visible changes)"
+
+        if not _confirm("edit", str(relative), detail):
+            return "Edit cancelled by the user. Do not retry the edit."
+
+        target.write_text(new, encoding="utf-8")
+        return f"Edited Test/{relative}"
     except (ValueError, FileNotFoundError, PermissionError, OSError) as exc:
         return f"Error: {exc}"
 
@@ -103,11 +139,9 @@ def delete_file(path: str) -> str:
             return "Error: deleting directories is not supported."
 
         relative = target.relative_to(SANDBOX)
-        answer = input(
-            f'Jarvis wants to delete "Test/{relative}". Continue? [y/N]: '
-        ).strip().lower()
+        size = target.stat().st_size
 
-        if answer not in {"y", "yes"}:
+        if not _confirm("delete", str(relative), f"{size} bytes. This cannot be undone."):
             return "Deletion cancelled by the user. Do not retry the deletion."
 
         target.unlink()

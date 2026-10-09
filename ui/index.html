@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jarvis Holographic Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{orb:['Orbitron','sans-serif'],mono:['JetBrains Mono','ui-monospace','monospace']}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--cy:#22d3ee;--bl:#3b82f6;--tx:#cfe8ff;--dim:#6f8aa3;--am:#fbbf24;--rd:#f87171;--gr:#4ade80;--vi:#8b5cf6;color-scheme:dark}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:#05070b;color:var(--tx);margin:0}
+.glass{position:relative;background:rgba(9,9,11,.62);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(34,211,238,.28);box-shadow:0 0 24px rgba(34,211,238,.09),inset 0 0 30px rgba(34,211,238,.03);border-radius:6px}
+.glass::before{content:"";position:absolute;inset:-1px;pointer-events:none;filter:drop-shadow(0 0 4px var(--cy));background:
+linear-gradient(var(--cy),var(--cy)) top left/14px 2px no-repeat,linear-gradient(var(--cy),var(--cy)) top left/2px 14px no-repeat,
+linear-gradient(var(--cy),var(--cy)) top right/14px 2px no-repeat,linear-gradient(var(--cy),var(--cy)) top right/2px 14px no-repeat,
+linear-gradient(var(--cy),var(--cy)) bottom left/14px 2px no-repeat,linear-gradient(var(--cy),var(--cy)) bottom left/2px 14px no-repeat,
+linear-gradient(var(--cy),var(--cy)) bottom right/14px 2px no-repeat,linear-gradient(var(--cy),var(--cy)) bottom right/2px 14px no-repeat}
+.glass.red{border-color:rgba(248,113,113,.4);box-shadow:0 0 30px rgba(248,113,113,.15)}
+.glass.red::before{filter:drop-shadow(0 0 4px var(--rd));background:
+linear-gradient(var(--rd),var(--rd)) top left/14px 2px no-repeat,linear-gradient(var(--rd),var(--rd)) top left/2px 14px no-repeat,
+linear-gradient(var(--rd),var(--rd)) top right/14px 2px no-repeat,linear-gradient(var(--rd),var(--rd)) top right/2px 14px no-repeat,
+linear-gradient(var(--rd),var(--rd)) bottom left/14px 2px no-repeat,linear-gradient(var(--rd),var(--rd)) bottom left/2px 14px no-repeat,
+linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-gradient(var(--rd),var(--rd)) bottom right/2px 14px no-repeat}
+.micro{font-size:9.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(34,211,238,.1);font-size:12px}
+.row:last-child{border-bottom:0}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid rgba(34,211,238,.3);background:rgba(34,211,238,.05);border-radius:4px;letter-spacing:.12em;font-size:11px;cursor:pointer;color:var(--tx);transition:box-shadow .2s,border-color .2s}
+.btn:hover{box-shadow:0 0 16px rgba(34,211,238,.35);border-color:var(--cy)}
+.btn.danger{border-color:rgba(248,113,113,.4);color:var(--rd)}.btn.danger:hover{box-shadow:0 0 16px rgba(248,113,113,.35);border-color:var(--rd)}
+.btn.solid{background:var(--cy);color:#02181d;border-color:var(--cy);font-weight:700}
+.btn:focus-visible,.core:focus-visible,.tab:focus-visible{outline:2px solid var(--cy);outline-offset:3px}
+.tab{padding:8px 16px;font-size:11px;letter-spacing:.14em;border:1px solid rgba(34,211,238,.2);border-radius:3px;color:var(--dim);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.tab.on{color:var(--cy);border-color:var(--cy);background:rgba(34,211,238,.08);box-shadow:0 0 14px rgba(34,211,238,.25)}
+.ring{animation:spin calc(var(--d) * var(--k)) linear infinite}.ring.rev{animation-direction:reverse}
+.ticks{background:repeating-conic-gradient(rgba(34,211,238,.65) 0 1deg,transparent 1deg 6deg);-webkit-mask:radial-gradient(closest-side,transparent 92%,#000 93%);mask:radial-gradient(closest-side,transparent 92%,#000 93%)}
+.aura{animation:aura calc(3s * var(--k)) ease-in-out infinite}
+.core{animation:core calc(2.4s * var(--k)) ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes aura{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes core{0%,100%{box-shadow:0 0 34px 6px rgba(34,211,238,.45)}50%{box-shadow:0 0 70px 18px rgba(34,211,238,.8)}}
+.xh{position:absolute;color:rgba(34,211,238,.5);font-size:14px;line-height:1}
+.lrow{display:grid;grid-template-columns:78px 130px 1fr 90px;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(34,211,238,.1);font-size:12px;align-items:center}
+.chip{padding:5px 12px;border:1px solid rgba(34,211,238,.2);border-radius:20px;font-size:10px;letter-spacing:.12em;color:var(--dim);cursor:pointer}
+.chip.on{color:var(--cy);border-color:var(--cy);background:rgba(34,211,238,.08)}
+@media(max-width:640px){.lrow{grid-template-columns:1fr auto}.lrow .d{grid-column:1/-1;order:3}}
+@media(prefers-reduced-motion:reduce){.ring,.aura,.core{animation:none}}
+</style>
+</head>
+<body class="font-mono text-[13px] min-h-screen">
+<div class="fixed inset-0 pointer-events-none" style="background:radial-gradient(circle at 15% 12%,rgba(139,92,246,.16),transparent 40%),radial-gradient(circle at 85% 88%,rgba(34,211,238,.15),transparent 42%),linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,rgba(34,211,238,.035) 1px,transparent 1px) 0 0/48px 48px"></div>
+<div class="fixed inset-0 pointer-events-none opacity-[.06]" style="background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)"></div>
+
+<div class="relative">
+<header class="glass mx-3 mt-3 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <div><div class="font-orb text-lg tracking-[.28em] text-cyan-300" style="text-shadow:0 0 12px rgba(34,211,238,.7)">J.A.R.V.I.S</div><div class="micro">NODE_ID // 0x4F2A</div></div>
+  <nav class="flex gap-2" aria-label="Views">
+    <button class="tab on" data-view="control"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>CONTROL CENTER</button>
+    <button class="tab" data-view="log"><i data-lucide="scroll-text" class="w-4 h-4"></i>LOG BOOK</button>
+  </nav>
+  <div class="text-right"><div class="flex items-center gap-2 justify-end"><span class="w-2 h-2 rounded-full bg-green-400" style="box-shadow:0 0 8px #4ade80"></span><span id="clock" class="text-xs text-cyan-100">--:--:--</span></div><div id="link" class="micro">LINK // CONNECTING</div></div>
+</header>
+
+<main>
+<section id="v-control" class="grid gap-3 p-3 lg:grid-cols-[270px_1fr_270px]">
+  <div class="flex flex-col gap-3 order-2 lg:order-1">
+    <div class="glass p-4">
+      <div class="micro mb-2 flex items-center gap-2"><i data-lucide="cpu" class="w-3 h-3"></i>SYS_STATUS // 0x4F</div>
+      <div class="row"><span class="text-slate-400">Model</span><span id="model">qwen2.5-coder:7b</span></div>
+      <div class="row"><span class="text-slate-400">Iteration</span><span id="iter" class="text-cyan-300">V0.4</span></div>
+      <div class="row"><span class="text-slate-400">Mode</span><span class="text-green-400">VOICE</span></div>
+      <div class="row"><span class="text-slate-400">Uptime</span><span id="up">00:14:08</span></div>
+    </div>
+    <div class="glass p-4">
+      <div class="micro mb-2 flex items-center gap-2"><i data-lucide="activity" class="w-3 h-3"></i>ACTIVITY // 0x51</div>
+      <div class="row"><span><span class="dot bg-cyan-400"></span>Sandbox files</span><span id="files">0</span></div>
+      <div class="row"><span><span class="dot bg-violet-500"></span>Tool calls</span><span id="calls">0</span></div>
+      <div class="row"><span><span class="dot bg-amber-400"></span>Pending confirm</span><span id="pend">0</span></div>
+      <div class="row"><span><span class="dot bg-green-400"></span>Model latency</span><span id="lat">-- ms</span></div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 order-1 lg:order-2">
+    <div class="glass relative p-4 flex flex-col items-center justify-center min-h-[480px]">
+      <span class="xh top-2 left-3">+</span><span class="xh top-2 right-3">+</span><span class="xh bottom-2 left-3">+</span><span class="xh bottom-2 right-3">+</span>
+      <div class="micro absolute top-3 left-8">VOICE_CORE // 0x7B</div><div class="micro absolute top-3 right-8">ALT 000 / AZ 360</div>
+      <div id="orb" class="relative my-6" style="--k:1;width:min(76vw,360px);aspect-ratio:1">
+        <div class="aura absolute -inset-[8%] rounded-full" style="background:radial-gradient(circle,rgba(34,211,238,.28),transparent 66%)"></div>
+        <div class="ring absolute inset-0 rounded-full border border-dashed border-cyan-400/40" style="--d:42s"></div>
+        <div class="ring rev ticks absolute inset-[4%] rounded-full" style="--d:26s"></div>
+        <div class="ring absolute inset-[12%] rounded-full border-2 border-transparent border-t-cyan-300 border-r-cyan-300/40" style="--d:7s;filter:drop-shadow(0 0 6px #22d3ee)"></div>
+        <div class="ring rev absolute inset-[19%] rounded-full border border-dotted border-blue-400/70" style="--d:15s"></div>
+        <div class="ring absolute inset-[25%] rounded-full border-2 border-transparent border-b-amber-300 border-l-amber-300/40" style="--d:4.5s;filter:drop-shadow(0 0 6px #fbbf24)"></div>
+        <button id="core" class="core absolute inset-[34%] rounded-full grid place-items-center text-cyan-950" style="background:radial-gradient(circle at 38% 32%,#cffafe,#22d3ee 42%,#0e7490 80%,#082f3a)" aria-label="Toggle voice listening"><i data-lucide="mic" class="w-7 h-7"></i></button>
+      </div>
+      <div id="state" class="font-orb text-sm tracking-[.24em]" aria-live="polite">STANDBY</div>
+      <div id="hint" class="micro mt-1">TAP CORE TO SPEAK // SAY "BYE" TO EXIT</div>
+      <div id="wave" class="flex items-end gap-[3px] h-10 mt-4" aria-hidden="true"></div>
+      <div id="heard" class="mt-4 text-xs text-cyan-100 text-center max-w-md break-words min-h-[1rem]"></div>
+      <div id="reply" class="mt-1 text-xs text-slate-400 text-center max-w-md break-words min-h-[1rem] max-h-24 overflow-y-auto"></div>
+      <div id="dev" class="hidden mt-3 w-full max-w-md"><input id="devIn" class="w-full bg-black/40 border border-cyan-400/25 rounded px-3 py-2 text-xs outline-none" placeholder="dev mode: type a command, press Enter" aria-label="Type a command"></div>
+    </div>
+    <div class="glass p-3 flex flex-wrap justify-center gap-2">
+      <button class="btn" id="b-stop"><i data-lucide="square" class="w-4 h-4"></i>STOP</button>
+      <button class="btn" id="b-call"><i data-lucide="phone" class="w-4 h-4"></i>CALL</button>
+      <button class="btn danger" id="b-off"><i data-lucide="power" class="w-4 h-4"></i>SHUT DOWN</button>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 order-3">
+    <div class="glass p-4">
+      <div class="micro mb-3 flex items-center gap-2"><i data-lucide="radio" class="w-3 h-3"></i>TOOL_USAGE // 0x52</div>
+      <div id="donut" class="relative mx-auto h-36 w-36 rounded-full" style="box-shadow:0 0 22px rgba(34,211,238,.25)"><div class="absolute inset-[16px] rounded-full grid place-items-center text-center" style="background:#0a0d12"><div><div id="donutN" class="font-orb text-xl">0</div><div class="micro">CALLS</div></div></div></div>
+      <div class="mt-4">
+        <div class="row"><span><span class="dot bg-cyan-400"></span>Files</span><span id="pF">35%</span></div>
+        <div class="row"><span><span class="dot bg-violet-500"></span>Run</span><span id="pR">25%</span></div>
+        <div class="row"><span><span class="dot bg-amber-400"></span>Web</span><span id="pW">20%</span></div>
+        <div class="row"><span><span class="dot bg-green-400"></span>Voice</span><span id="pV">20%</span></div>
+      </div>
+    </div>
+    <div class="glass p-4">
+      <div class="micro mb-2 flex items-center gap-2"><i data-lucide="shield-check" class="w-3 h-3"></i>SANDBOX // 0x53</div>
+      <div id="sbx" class="text-xs text-cyan-100 break-all">~/Jarvis/Test</div>
+      <div class="row mt-2"><span class="text-slate-400">Edits</span><span class="text-amber-400">ASK FIRST</span></div>
+      <div class="row"><span class="text-slate-400">Deletes</span><span class="text-red-400">ASK FIRST</span></div>
+      <div class="row"><span class="text-slate-400">Outside Test/</span><span class="text-green-400">BLOCKED</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="v-log" class="hidden p-3">
+  <div class="glass">
+    <div class="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-cyan-400/15">
+      <div><div class="font-orb tracking-[.2em] text-cyan-300">LOG BOOK</div><div class="micro">TOOL_CALL_RECORD // 0x60</div></div>
+      <div class="flex flex-wrap items-center gap-2" id="chips">
+        <button class="chip on" data-f="ALL">ALL</button><button class="chip" data-f="FILES">FILES</button><button class="chip" data-f="RUN">RUN</button><button class="chip" data-f="WEB">WEB</button><button class="chip" data-f="VOICE">VOICE</button>
+        <label class="flex items-center gap-2 border border-cyan-400/25 rounded px-2 py-1"><i data-lucide="search" class="w-3 h-3 text-slate-400"></i><input id="q" class="bg-transparent outline-none w-32 text-xs placeholder:text-slate-500" placeholder="filter..." aria-label="Filter log"></label>
+      </div>
+    </div>
+    <div class="lrow micro" style="color:var(--dim)"><span>TIME</span><span>TOOL</span><span class="d">DETAIL</span><span>RESULT</span></div>
+    <div id="rows"></div>
+  </div>
+</section>
+</main>
+<div class="micro text-center pb-4">SANDBOX LOCKED // ALL WRITES REQUIRE CONFIRMATION</div>
+</div>
+
+<div id="modal" class="hidden fixed inset-0 z-40 items-center justify-center p-4" style="background:rgba(2,4,8,.78);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div id="mBox" class="glass w-full max-w-md p-6">
+    <div id="mTag" class="micro mb-3" style="color:var(--cy)">PERMISSION_REQUEST // 0xA1</div>
+    <div id="mTitle" class="font-orb text-lg leading-snug">Jarvis wants to edit<br><span id="mFile" class="text-cyan-300">calculator.py</span></div>
+    <pre id="mDiff" class="mt-4 p-3 text-xs rounded border border-cyan-400/15 bg-black/40 overflow-x-auto"></pre>
+    <div class="mt-5 flex gap-3 justify-end">
+      <button class="btn" id="no"><i data-lucide="x" class="w-4 h-4"></i>NO</button>
+      <button class="btn solid" id="yes"><i data-lucide="check" class="w-4 h-4"></i>YES</button>
+    </div>
+  </div>
+</div>
+
+<div id="off" class="hidden fixed inset-0 z-50 items-center justify-center flex-col gap-4" style="background:#020305">
+  <div id="offMsg" class="font-orb tracking-[.3em] text-slate-500 text-center px-4">OFFLINE</div>
+  <div class="flex gap-3"><button class="btn" id="reboot"><i data-lucide="power" class="w-4 h-4"></i>BOOT JARVIS</button><button class="btn danger" id="quit"><i data-lucide="x" class="w-4 h-4"></i>QUIT APP</button></div>
+</div>
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass px-5 py-3 text-xs" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const vis=(e,on)=>{e.classList.toggle('hidden',!on);e.classList.toggle('flex',on)};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const col={FILES:'#22d3ee',RUN:'#8b5cf6',WEB:'#fbbf24',VOICE:'#4ade80'};
+const S={idle:{k:1,l:'STANDBY',c:'#6f8aa3',h:'TAP CORE TO SPEAK // SAY "BYE" TO EXIT',w:[6,14]},
+listening:{k:.4,l:'LISTENING',c:'#4ade80',h:'CAPTURING AUDIO // 0xB1',w:[15,100]},
+thinking:{k:.2,l:'PROCESSING',c:'#fbbf24',h:'CALLING TOOLS // 0xA7',w:[8,30]},
+speaking:{k:.6,l:'SPEAKING',c:'#22d3ee',h:'OUTPUT STREAM // 0xC3',w:[20,85]},
+confirm:{k:.3,l:'AWAITING YOU',c:'#f87171',h:'APPROVE OR DENY THE REQUEST',w:[6,14]}};
+const rc=r=>({ok:'#4ade80',approved:'#22d3ee',deleted:'#fbbf24',denied:'#f87171',error:'#f87171'}[r]||'#fbbf24');
+let calls=0,pending=0,filter='ALL',cur='idle',counts={FILES:0,RUN:0,WEB:0,VOICE:0},logs=[],started=Date.now()/1000,ws,askId=null;
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.add('hidden'),3200)}
+function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));else toast('Not connected to Jarvis yet.')}
+function paint(){
+  $('#calls').textContent=calls;$('#donutN').textContent=calls;
+  const p=$('#pend');p.textContent=pending;p.style.color=pending?'#fbbf24':'';
+  const tot=Object.values(counts).reduce((a,b)=>a+b,0);
+  if(!tot){$('#donut').style.background='rgba(34,211,238,.15)'}else{let a=0;const seg=[];
+    for(const k in counts){const n=counts[k]/tot*100;seg.push(`${col[k]} ${a}% ${a+n}%`);a+=n}
+    $('#donut').style.background=`conic-gradient(${seg.join(',')})`}
+  for(const [id,k] of [['pF','FILES'],['pR','RUN'],['pW','WEB'],['pV','VOICE']])$('#'+id).textContent=(tot?Math.round(counts[k]/tot*100):0)+'%';
+}
+function renderLog(){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=logs.filter(l=>(filter==='ALL'||l.cat===filter)&&(!q||(l.tool+l.d+l.r).toLowerCase().includes(q)));
+  $('#rows').innerHTML=list.length?list.map(l=>`<div class="lrow"><span style="color:var(--dim)">${esc(l.t)}</span><span><span class="dot" style="background:${col[l.cat]||'#22d3ee'}"></span>${esc(l.tool)}</span><span class="d">${esc(l.d)}</span><span style="color:${rc(l.r)}">${esc(l.r)}</span></div>`).join(''):'<div class="p-6 text-center text-slate-500">Nothing logged yet. Say something to Jarvis, or clear the filter.</div>';
+}
+function setState(s){if(!S[s])return;cur=s;$('#orb').style.setProperty('--k',S[s].k);const l=$('#state');l.textContent=S[s].l;l.style.color=S[s].c;$('#hint').textContent=S[s].h}
+
+function showConfirm(m){
+  askId=m.id;pending=m.pending??1;paint();const del=m.action==='delete';
+  $('#mBox').classList.toggle('red',del);
+  $('#mTag').style.color=del?'var(--rd)':'var(--cy)';$('#mTag').textContent=del?'DESTRUCTIVE_ACTION // 0xD0':'PERMISSION_REQUEST // 0xA1';
+  $('#mTitle').firstChild.textContent=del?'Jarvis wants to delete':'Jarvis wants to edit';
+  $('#mFile').textContent=m.file;$('#mFile').style.color=del?'var(--rd)':'var(--cy)';
+  $('#mDiff').innerHTML=String(m.detail||'').split('\n').map(l=>{const c=(l.startsWith('+')&&!l.startsWith('+++'))?'var(--gr)':(l.startsWith('-')&&!l.startsWith('---'))?'var(--rd)':'var(--dim)';return `<span style="color:${c}">${esc(l)}</span>`}).join('\n');
+  vis($('#modal'),true);$('#no').focus();
+}
+function closeConfirm(){askId=null;vis($('#modal'),false)}
+function answer(ok){if(!askId)return;send({type:'confirm_answer',id:askId,ok});closeConfirm()}
+
+function on(m){
+  switch(m.type){
+    case 'snapshot':
+      $('#model').textContent=m.model;$('#iter').textContent=m.iteration;$('#sbx').textContent=m.sandbox;$('#files').textContent=m.files;
+      calls=m.calls;counts=m.counts;pending=m.pending;logs=m.logs;started=m.started;
+      if(m.latency_ms)$('#lat').textContent=m.latency_ms+' ms';
+      setState(m.state);paint();renderLog();break;
+    case 'state':setState(m.state);break;
+    case 'log':logs.unshift(m.entry);calls=m.calls;counts=m.counts;$('#files').textContent=m.files;paint();renderLog();break;
+    case 'heard':$('#heard').textContent='YOU // '+m.text;$('#reply').textContent='';break;
+    case 'reply':$('#reply').textContent='JARVIS // '+m.text;if(m.latency_ms)$('#lat').textContent=m.latency_ms+' ms';break;
+    case 'confirm':showConfirm(m);break;
+    case 'confirm_done':pending=m.pending;paint();if(askId===m.id)closeConfirm();break;
+    case 'toast':toast(m.text);break;
+  }
+}
+function connect(){
+  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
+  ws.onopen=()=>{$('#link').textContent='LINK // ONLINE'};
+  ws.onclose=()=>{$('#link').textContent='LINK // RECONNECTING';setTimeout(connect,1500)};
+  ws.onmessage=e=>{try{on(JSON.parse(e.data))}catch(err){console.error(err)}};
+}
+
+$$('[data-view]').forEach(b=>b.onclick=()=>{
+  $$('[data-view]').forEach(x=>x.classList.toggle('on',x===b));
+  $('#v-control').classList.toggle('hidden',b.dataset.view!=='control');
+  $('#v-log').classList.toggle('hidden',b.dataset.view!=='log');
+});
+$$('#chips .chip').forEach(c=>c.onclick=()=>{filter=c.dataset.f;$$('#chips .chip').forEach(x=>x.classList.toggle('on',x===c));renderLog()});
+$('#q').oninput=renderLog;
+$('#core').onclick=()=>send({type:'toggle_voice'});
+$('#b-stop').onclick=()=>{send({type:'stop'});toast('Stopped. Back to standby.')};
+$('#b-call').onclick=()=>toast('Call is not wired up yet.');
+$('#yes').onclick=()=>answer(true);$('#no').onclick=()=>answer(false);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')answer(false)});
+$('#b-off').onclick=()=>{send({type:'stop'});vis($('#off'),true);$('#reboot').focus()};
+$('#reboot').onclick=()=>vis($('#off'),false);
+$('#quit').onclick=()=>{send({type:'quit'});$('#offMsg').textContent='JARVIS HAS QUIT. YOU CAN CLOSE THIS WINDOW.'};
+if(location.hash==='#dev'){vis($('#dev'),true);$('#devIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value.trim()){send({type:'say',text:e.target.value});e.target.value=''}})}
+
+const wave=$('#wave');for(let i=0;i<32;i++){const b=document.createElement('i');b.style.cssText='width:4px;height:8%;border-radius:2px;background:#22d3ee;opacity:.8;transition:height .12s';wave.appendChild(b)}
+setInterval(()=>{const w=S[cur].w;[...wave.children].forEach(b=>{b.style.height=(w[0]+Math.random()*(w[1]-w[0]))+'%';b.style.background=cur==='idle'?'#22d3ee':S[cur].c})},120);
+setInterval(()=>{const up=Math.max(0,Math.floor(Date.now()/1000-started)),p=n=>String(n).padStart(2,'0');$('#up').textContent=`${p(Math.floor(up/3600))}:${p(Math.floor(up%3600/60))}:${p(up%60)}`;$('#clock').textContent=new Date().toLocaleTimeString('en-GB')},1000);
+$('#clock').textContent=new Date().toLocaleTimeString('en-GB');paint();renderLog();
+try{lucide.createIcons()}catch(e){}
+connect();
+</script>
+</body>
+</html>
