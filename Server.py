@@ -21,10 +21,12 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
 import Agent
+import Memory
+from Personality import VOICE
 from Tools import SANDBOX, listen, set_confirm_handler, speak
 
 PORT = 8765
-ITERATION = "V0.4"
+ITERATION = "V0.5"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
 LOG_FILE = ROOT / "logs" / "logbook.jsonl"
@@ -38,6 +40,7 @@ CATEGORY = {
     "list_files": "FILES", "read_file": "FILES", "create_file": "FILES",
     "edit_file": "FILES", "delete_file": "FILES",
     "run_python": "RUN", "web_search": "WEB",
+    "remember": "MEMORY", "recall": "MEMORY", "forget": "MEMORY",
 }
 
 
@@ -49,8 +52,10 @@ def classify(result) -> str:
         return "ok" if r.startswith("Exit code: 0") else "error"
     if r.startswith("Error"):
         return "error"
-    if r.startswith("Deleted "):
+    if r.startswith(("Deleted ", "Forgot ")):
         return "deleted"
+    if r.startswith("Remembered"):
+        return "approved"
     if r.startswith("Edited "):
         return "approved"
     if "cancelled" in r[:30].lower():
@@ -63,6 +68,12 @@ def describe(name: str, kwargs: dict, result) -> str:
         return str(kwargs.get("query", ""))
     if name == "list_files":
         return "Test/"
+    if name == "remember":
+        return str(kwargs.get("fact", ""))
+    if name == "recall":
+        return str(kwargs.get("query", ""))
+    if name == "forget":
+        return str(kwargs.get("memory_id", ""))
     detail = str(kwargs.get("path", ""))
     if name == "run_python" and isinstance(result, str) and result:
         detail += f"  ({result.splitlines()[0]})"
@@ -78,7 +89,7 @@ class Hub:
         self.started = time.time()
         self.state = "idle"
         self.latency_ms: int | None = None
-        self.counts = {"FILES": 0, "RUN": 0, "WEB": 0, "VOICE": 0}
+        self.counts = {"FILES": 0, "RUN": 0, "WEB": 0, "MEMORY": 0, "VOICE": 0}
         self.logs: list[dict] = []
         self.pending: dict[str, tuple[threading.Event, dict]] = {}
         self._lock = threading.Lock()
@@ -114,6 +125,7 @@ class Hub:
             "files": self.file_count(),
             "calls": len(self.logs),
             "counts": self.counts,
+            "memory": Memory.stats(),
             "pending": len(self.pending),
             "state": self.state,
             "started": self.started,
@@ -157,6 +169,7 @@ class Hub:
         self.emit({
             "type": "log", "entry": entry, "calls": len(self.logs),
             "counts": self.counts, "files": self.file_count(),
+            "memory": Memory.stats(),
         })
 
 
@@ -180,6 +193,30 @@ def instrument_tools() -> None:
 
     for name, fn in list(Agent.FUNCTIONS.items()):
         Agent.FUNCTIONS[name] = make(name, fn)
+
+
+def on_memory_event(kind: str, detail: str) -> None:
+    """Automatic memory activity (auto-recall, session summaries) -> Log Book."""
+    names = {
+        "auto_recall": ("memory_recall", "ok"),
+        "summary": ("session_summary", "approved"),
+        "summary_error": ("session_summary", "error"),
+    }
+    tool, result = names.get(kind, (kind, "ok"))
+    hub.add_log(tool, "MEMORY", detail, result)
+
+
+def memory_list() -> dict:
+    items = sorted(Memory.store.load_memories(), key=lambda m: m["created"], reverse=True)
+    return {
+        "type": "memories",
+        "items": [
+            {"id": m["id"], "text": m["text"], "created": m["created"], "source": m.get("source", "")}
+            for m in items
+        ],
+        "profile": Memory.store.read_profile(),
+        "stats": Memory.stats(),
+    }
 
 
 def confirm(action: str, path: str, detail: str) -> bool:
@@ -240,6 +277,12 @@ class Session:
 
         threading.Thread(target=work, daemon=True).start()
 
+    def announce(self, text: str) -> None:
+        """Speak a short status line (e.g. "Searching for...") mid-turn."""
+        hub.set_state("speaking")
+        self._speak(text)
+        hub.set_state("thinking")
+
     def _voice_loop(self, sid: int) -> None:
         try:
             while sid == self.sid:
@@ -256,6 +299,8 @@ class Session:
                 hub.add_log("speech_to_text", "VOICE", f'heard: "{text}"', "ok")
                 hub.emit({"type": "heard", "text": text})
                 if text.strip().lower().strip(".!?, ") in EXIT_WORDS:
+                    # Summarize while "Goodbye" is being spoken.
+                    Memory.end_session(Agent.MODEL, on_done=lambda: hub.emit(memory_list()))
                     self._speak("Goodbye.")
                     break
                 if not self._turn(text, sid):
@@ -285,8 +330,11 @@ class Session:
         text = text[:1200]
         if sys.platform == "darwin":
             # `say` is reliable off the main thread and can be interrupted.
-            self.say_proc = subprocess.Popen(["say", text])
-            self.say_proc.wait()
+            self.say_proc = subprocess.Popen(["say", "-v", VOICE, text])
+            if self.say_proc.wait() > 0:
+                # Voice not installed on this Mac: use the system default.
+                self.say_proc = subprocess.Popen(["say", text])
+                self.say_proc.wait()
         else:
             speak(text)
 
@@ -304,6 +352,8 @@ async def lifespan(app: FastAPI):
     hub.loop = asyncio.get_running_loop()
     instrument_tools()
     set_confirm_handler(confirm)
+    Memory.set_event_handler(on_memory_event)
+    Agent.set_status_handler(session.announce)
     yield
 
 
@@ -328,6 +378,14 @@ def handle(msg: dict) -> None:
         if item:
             item[1]["ok"] = bool(msg.get("ok"))
             item[0].set()
+    elif kind == "list_memories":
+        hub.emit(memory_list())
+    elif kind == "delete_memory":
+        # The user clicked delete themselves in the Memory view, so no popup.
+        mid = str(msg.get("id", ""))
+        if Memory.forget(mid):
+            hub.add_log("forget", "MEMORY", mid, "deleted")
+        hub.emit(memory_list())
     elif kind == "quit":
         session.stop()
         threading.Timer(0.3, lambda: os._exit(0)).start()
@@ -342,7 +400,7 @@ async def ws_endpoint(ws: WebSocket):
     hub.clients.add(ws)
     await ws.send_json(hub.snapshot())
     try:
-        while True:
+        while True: 
             try:
                 msg = await ws.receive_json()
             except (ValueError, KeyError):

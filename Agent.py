@@ -1,53 +1,50 @@
 from __future__ import annotations
 
 import json
+import re
+import threading
 from typing import Any
+
+import os
 
 import ollama
 from dotenv import load_dotenv
 
 load_dotenv()  # reads .env in the current directory, if present
 
+import Llm
+import Memory
+from Personality import (
+    PERSONA,
+    PHRASE_PROMPT,
+    build_system_prompt,
+    search_announcement,
+)
 from Tools import (
     SANDBOX,
+    UNTRUSTED_TOOLS,
     create_file,
     delete_file,
     edit_file,
+    forget,
+    get_time,
     list_files,
     listen,
+    mark_untrusted,
+    now_line,
     read_file,
+    recall,
+    remember,
+    reset_untrusted,
     run_python,
     speak,
     web_search,
 )
 
-
-MODEL = "qwen2.5-coder:7b"
+# Change the model here, or without editing code: JARVIS_MODEL=qwen3:8b in .env
+MODEL = os.getenv("JARVIS_MODEL", "qwen3.5:9b")
 MAX_TOOL_CALLS = 8
-
-
-SYSTEM_PROMPT = f"""
-You are Jarvis V0.2.5, a simple local coding and research assistant.
-
-You may ONLY access files through the provided tools, and only inside:
-{SANDBOX}
-
-Rules:
-- Never use shell commands.
-- Only use a tool when the user's request requires it.
-- Use web_search when the user asks for current information,
-  documentation, research, news, or information from the internet.
-- When using web_search, pass the user's request as a clear search query.
-- Do not claim to have searched the web if you did not use web_search.
-- If the user asks to create one file, call create_file once and stop.
-- Do not list/read a file just to verify a successful create or edit.
-- Do not edit or delete unless the user explicitly asks.
-- Never delete a file just to recreate or "fix" it.
-- If a write tool (create_file, edit_file, delete_file) succeeds, give the
-  user the result instead of making more tool calls.
-- run_python can execute a .py file that already exists in the sandbox, so
-  you can check that code you wrote actually works before reporting back.
-"""
+PERSONA_ON_WRITES = True   # one extra short model call so write results sound like Jarvis
 
 
 TOOLS = [
@@ -199,6 +196,77 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_time",
+            "description": (
+                "Get the current date and time. The user's local time is "
+                "already in your instructions, so only use this for a time "
+                "in a DIFFERENT place, with an IANA time zone name such as "
+                "'America/Los_Angeles' or 'Asia/Tokyo'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "timezone": {
+                        "type": "string",
+                        "description": "IANA time zone name. Optional.",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remember",
+            "description": (
+                "Save one short fact about the user to long-term memory. Use "
+                "when the user asks you to remember something or states a "
+                "lasting fact or preference. Set permanent=true only for core "
+                "facts (name, job, main projects); it asks the user first."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fact": {"type": "string"},
+                    "permanent": {"type": "boolean"},
+                },
+                "required": ["fact"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recall",
+            "description": (
+                "Search long-term memory. Use when the user asks what you "
+                "know or remember, or to find a memory id."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "forget",
+            "description": (
+                "Delete one memory by its id (from recall). Asks the user "
+                "for confirmation. Only when the user asks to forget."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"memory_id": {"type": "string"}},
+                "required": ["memory_id"],
+            },
+        },
+    },
 ]
 
 
@@ -210,66 +278,164 @@ FUNCTIONS = {
     "delete_file": delete_file,
     "run_python": run_python,
     "web_search": web_search,
+    "get_time": get_time,
+    "remember": remember,
+    "recall": recall,
+    "forget": forget,
 }
 
 
+# --- Spoken status ("Searching for ...") --------------------------------
+# The UI registers a handler that speaks short status lines while a slow tool
+# runs. With no handler (terminal use) it just prints.
+_status_handler = None
+
+
+def set_status_handler(handler) -> None:
+    """handler(text) -> None; it may block while the text is spoken."""
+    global _status_handler
+    _status_handler = handler
+
+
+def _announce(text: str) -> None:
+    print(f"[status] {text}")
+    if _status_handler is not None:
+        try:
+            _status_handler(text)
+        except Exception:
+            pass
+
+
+# Small models sometimes SAY they are searching instead of calling the tool.
+_PROMISE_RE = re.compile(
+    r"\b(searching|search the web|search for|look(ing)? (it |that |this )?up|"
+    r"let me (check|look|find|search|pull)|checking the web|pulling up)\b",
+    re.IGNORECASE,
+)
+
+
+def _promises_search(content: str) -> bool:
+    return bool(content) and len(content) < 300 and bool(_PROMISE_RE.search(content))
+
+
+def _make_call(name: str, arguments: dict):
+    class FunctionCall:
+        pass
+
+    class Call:
+        pass
+
+    call = Call()
+    call.function = FunctionCall()
+    call.function.name = name
+    call.function.arguments = arguments
+    return call
+
+
+def _calls_from_content(content: str) -> list:
+    """Some Qwen/Ollama combinations return a tool call as JSON in
+    message.content instead of populating message.tool_calls."""
+    try:
+        parsed = json.loads(content)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    if (
+        isinstance(parsed, dict)
+        and parsed.get("name") in FUNCTIONS
+        and isinstance(parsed.get("arguments"), dict)
+    ):
+        return [_make_call(parsed["name"], parsed["arguments"])]
+
+    return []
+
+
 def run_turn(user_text: str) -> str:
-    """Run one request through Ollama's native tool-calling loop."""
+    """Run one request: build memory context, run the tool loop, remember it."""
+
+    reset_untrusted()
+
+    try:
+        profile, memories = Memory.context_for(user_text)
+    except Exception:
+        profile, memories = "", []
 
     messages: list[dict[str, Any]] = [
         {
             "role": "system",
-            "content": SYSTEM_PROMPT,
+            "content": build_system_prompt(SANDBOX, profile, memories, now_line()),
         },
+        *Memory.history.messages(),
         {
             "role": "user",
             "content": user_text,
         },
     ]
 
+    reply = _run_loop(messages, user_text)
+    Memory.history.add_turn(user_text, reply)
+    return reply
+
+
+def _phrase(result: str) -> str:
+    """Say a write result in Jarvis's voice. Falls back to the plain result."""
+
+    plain = result + "."
+
+    if not PERSONA_ON_WRITES:
+        return plain
+
+    try:
+        response = Llm.chat(
+            MODEL,
+            [
+                {"role": "system", "content": PERSONA},
+                {"role": "user", "content": PHRASE_PROMPT + result},
+            ],
+        )
+        text = " ".join((response.message.content or "").split())
+    except Exception:
+        return plain
+
+    # Safety net: keep the plain result if the model rambled or dropped a
+    # file name that was in the result.
+    names = re.findall(r"[\w./-]+\.\w+", result)
+    if not text or len(text) > 300 or any(n not in text for n in names):
+        return plain
+
+    return text
+
+
+def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
+    """Ollama's native tool-calling loop."""
+
     calls_used = 0
+    web_called = False
+    search_forced = False
 
     while calls_used < MAX_TOOL_CALLS:
-        response = ollama.chat(
-            model=MODEL,
-            messages=messages,
-            tools=TOOLS,
-        )
+        response = Llm.chat(MODEL, messages, TOOLS)
 
         message = response.message
         calls = message.tool_calls or []
 
-        # Some local Qwen/Ollama combinations return a tool call as JSON
-        # in message.content instead of populating message.tool_calls.
-        # Detect that format and turn it into the same internal tool call.
         if not calls:
             content = (message.content or "").strip()
+            calls = _calls_from_content(content)
 
-            try:
-                parsed = json.loads(content)
-
+            if not calls:
+                # The model announced a search but never called the tool.
+                # Run the search for it instead of ending the turn.
                 if (
-                    isinstance(parsed, dict)
-                    and parsed.get("name") in FUNCTIONS
-                    and isinstance(parsed.get("arguments"), dict)
+                    user_text
+                    and not web_called
+                    and not search_forced
+                    and _promises_search(content)
                 ):
-                    class FunctionCall:
-                        pass
-
-                    class Call:
-                        pass
-
-                    call = Call()
-                    call.function = FunctionCall()
-                    call.function.name = parsed["name"]
-                    call.function.arguments = parsed["arguments"]
-                    calls = [call]
-
+                    search_forced = True
+                    calls = [_make_call("web_search", {"query": user_text})]
                 else:
                     return content or "Done."
-
-            except (json.JSONDecodeError, TypeError):
-                return content or "Done."
 
         messages.append(message)
 
@@ -285,10 +451,19 @@ def run_turn(user_text: str) -> str:
                     if not isinstance(arguments, dict):
                         arguments = json.loads(arguments)
 
+                    if name == "web_search":
+                        web_called = True
+                        _announce(search_announcement(arguments.get("query", "")))
+
                     result = FUNCTIONS[name](**arguments)
 
                 except Exception as exc:
                     result = f"Error executing {name}: {exc}"
+
+                # Outside content (web pages, files, script output) must not be
+                # able to write to memory without the user's approval.
+                if name in UNTRUSTED_TOOLS:
+                    mark_untrusted()
 
             # Tavily/web_search returns structured data (a list of dicts),
             # while Ollama expects tool message content to be a string.
@@ -325,7 +500,7 @@ def run_turn(user_text: str) -> str:
                         "Edit cancelled",
                     )
                 ):
-                    return result + "."
+                    return _phrase(result)
 
             if calls_used >= MAX_TOOL_CALLS:
                 return (
@@ -350,15 +525,41 @@ def check_ollama() -> bool:
         return False
 
     try:
-        ollama.show(MODEL)
+        info = ollama.show(MODEL)
 
     except Exception:
         print(
-            f"Error: model '{MODEL}' is not installed: {MODEL}"
+            f"Error: model '{MODEL}' is not installed. "
+            f"Run: ollama pull {MODEL}  (or set JARVIS_MODEL in .env)"
         )
         return False
 
+    capabilities = getattr(info, "capabilities", None)
+    if capabilities and "tools" not in capabilities:
+        print(
+            f"Warning: '{MODEL}' does not list tool support, so Jarvis may "
+            "not be able to use its tools with it."
+        )
+
+    if Memory.embeddings.embed("ping") is None:
+        print(
+            f"Note: embedding model '{Memory.embeddings.EMBED_MODEL}' is not "
+            f"installed, so memory falls back to keyword search. "
+            f"Run: ollama pull {Memory.embeddings.EMBED_MODEL}"
+        )
+
     return True
+
+
+def save_session(wait: bool = False) -> None:
+    """Summarize this conversation into long-term memory (background job)."""
+
+    done = threading.Event()
+    started = Memory.end_session(MODEL, on_done=done.set)
+
+    if started and wait:
+        print("Saving what I learned...")
+        done.wait(timeout=90)
 
 
 def main() -> None:
@@ -366,7 +567,7 @@ def main() -> None:
 
     SANDBOX.mkdir(parents=True, exist_ok=True)
 
-    print("Jarvis V0.3")
+    print("Jarvis V0.5")
     print(f"Model:   {MODEL}")
     print(f"Sandbox: {SANDBOX}")
     print(
@@ -411,6 +612,7 @@ def main() -> None:
 
         if user_text.lower() in EXIT_WORDS:
             print("Goodbye.")
+            save_session(wait=True)
             break
 
         if not user_text:

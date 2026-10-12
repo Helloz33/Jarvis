@@ -28,6 +28,14 @@ def _confirm(action: str, relative: str, detail: str = "") -> bool:
     return answer in {"y", "yes"}
 
 
+def ask_permission(action: str, target: str, detail: str = "") -> bool:
+    """Generic Yes/No permission for non-file actions (e.g. forgetting a memory)."""
+    if _confirm_handler is not None:
+        return bool(_confirm_handler(action, target, detail))
+    answer = input(f'Jarvis wants to {action}: {target}. Continue? [y/N]: ').strip().lower()
+    return answer in {"y", "yes"}
+
+
 def _normalize_content(content: str) -> str:
     """Fix a common small-model glitch: writing literal backslash-n instead
     of real newlines when it builds multi-line file content for a tool call.

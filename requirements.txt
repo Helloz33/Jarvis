@@ -1,4 +1,4 @@
-ollama
+ollama>=0.5.0
 tavily-python
 python-dotenv
 SpeechRecognition
@@ -7,3 +7,4 @@ pyttsx3
 fastapi
 uvicorn[standard]
 pywebview
+numpy

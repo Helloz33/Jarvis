@@ -7,3 +7,7 @@ env/
 .DS_Store
 logs/
 logs/
+
+memory_data/
+logs/
+.env

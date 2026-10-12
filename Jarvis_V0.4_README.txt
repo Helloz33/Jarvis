@@ -1,61 +1,68 @@
-Jarvis V0.3
-A local coding and research assistant built around Ollama, with filesystem tools, a controlled Python runner, Tavily web search, and voice input/output.
+Jarvis V0.4
+A local, voice-first coding and research assistant built around Ollama, with a holographic control-center UI, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
 
 Project layout
 Jarvis/
-├── Agent.py                 <- main entry point and Ollama tool-calling loop
+├── app.py                   <- main entry point: starts the server and opens the Jarvis window
+├── server.py                <- local backend: bridges the UI to the agent over a WebSocket
+├── Agent.py                 <- system prompt, Ollama tool schemas, tool-calling loop (also runs standalone in the terminal)
+├── requirements.txt         <- every Python package Jarvis needs
+├── .env                     <- your TAVILY_API_KEY (never committed)
+├── .env.example             <- safe template for .env
+├── ui/
+│   └── index.html           <- the control center, log book, and permission popup
+├── logs/
+│   └── logbook.jsonl        <- created automatically, one line per tool call (never committed)
 ├── Tools/
 │   ├── __init__.py          <- re-exports the tool functions
-│   ├── filesystem.py        <- sandbox path + list/read/create/edit/delete
+│   ├── filesystem.py        <- sandbox path + list/read/create/edit/delete + confirmation hook
 │   ├── python_runner.py     <- run_python for Python files in Test/
 │   ├── web_search.py        <- web_search using Tavily
 │   ├── speech_to_text.py    <- listen, microphone -> text via Google Web Speech
 │   └── text_to_speech.py    <- speak, text -> audio via pyttsx3
 └── Test/
-    └── hello.py              <- sample file in the sandbox
+    └── hello.py             <- sample file in the sandbox
 Jarvis should be run from inside the Jarvis/ directory so the Tools package imports correctly.
 
 What Jarvis can do
-List files inside the Test/ sandbox.
+Run as a desktop app with a live control center: model and iteration, tool-usage stats, a voice core that reacts to what Jarvis is doing, and quick commands.
 
-Read text files inside the sandbox.
+Listen to your voice and speak its replies. Click the core once and Jarvis keeps listening until you say "exit", "quit", or "bye", or press STOP.
 
-Create new files without overwriting existing files.
+List, read, and create files inside the Test/ sandbox.
 
-Edit existing files.
-
-Delete files with confirmation.
+Edit and delete files inside the sandbox, but only after you approve a popup that names the file. Edits show a before/after diff.
 
 Run existing .py files inside the sandbox with run_python.
 
 Search the internet with web_search through Tavily.
 
-Listen to a spoken phrase and turn it into text with the "voice" command.
-
-Speak its replies back out loud.
-
-Use Ollama's native tool-calling loop to combine multiple tools in one request.
+Record every tool call in the Log Book, with filters and search. The log is saved to disk, so it survives restarts.
 
 Requirements
-Python
+Python 3.11 or newer
 
-Ollama
-
-qwen2.5-coder:7b
-
-tavily-python
+Ollama, with the model qwen2.5-coder:7b
 
 A Tavily API key for web search
 
-SpeechRecognition
+portaudio (macOS system library, needed for the microphone)
 
-pyaudio (requires the portaudio system library)
+An internet connection (speech recognition uses Google Web Speech, and web_search uses Tavily)
 
-pyttsx3
+A working microphone and speakers
 
-An internet connection for speech recognition (Google Web Speech API) and for web_search
+The Python packages are all listed in requirements.txt:
 
-A working microphone, and speakers for spoken replies
+  ollama
+  tavily-python
+  python-dotenv
+  SpeechRecognition
+  pyaudio
+  pyttsx3
+  fastapi
+  uvicorn[standard]
+  pywebview
 
 Setup
 1. Start Ollama
@@ -66,118 +73,118 @@ ollama pull qwen2.5-coder:7b
 
 2. Install the system dependency for microphone input (macOS)
 brew install portaudio
+Do this before step 3, because pyaudio will not build without it.
 
 3. Install the Python dependencies
 From the Jarvis directory:
 
-python -m pip install ollama tavily-python SpeechRecognition pyaudio pyttsx3
+python -m pip install -r requirements.txt
 
-4. Set the Tavily API key
-The current web-search tool reads the key from the TAVILY_API_KEY environment variable.
+If you add a new package later, add it to requirements.txt too.
 
-For the current terminal session:
+4. Add your Tavily API key
+Create a file named .env in the Jarvis directory containing one line:
 
-export TAVILY_API_KEY="YOUR_TAVILY_API_KEY"
-Do not put the API key directly into Agent.py, web_search.py, or any file that will be committed to GitHub.
+TAVILY_API_KEY=your_real_key_here
 
-If you later switch Jarvis to automatic .env loading or macOS Keychain storage, update this setup section to match the new secret-management system.
+Jarvis loads it automatically at startup, so there is no need to export it in the terminal.
+.env must be listed in .gitignore. Never put the key in any file that will be committed to GitHub. If a key was ever committed, treat it as burned and rotate it in the Tavily dashboard.
+
+5. Keep private files out of Git
+Make sure .gitignore contains:
+
+.env
+logs/
+
+The log book saves what you say to Jarvis, so logs/ should never be uploaded.
 
 Run Jarvis
 From inside ~/Jarvis/:
 
-python Agent.py
-You should see something like:
+python app.py
 
-Jarvis V0.3
-Model:   qwen2.5-coder:7b
-Sandbox: .../Jarvis/Test
-Type 'exit' or 'quit' to close. Type 'voice' to speak instead.
+A Jarvis window opens. If the native window can't start on your Python version, Jarvis opens the same page in your browser instead (http://127.0.0.1:8765).
 
-Test the filesystem tools
-Try:
+You can still run the old terminal version with python Agent.py. In that mode edit and delete confirmations fall back to a y/N prompt in the terminal.
 
-Create a file called hello2.py that prints "Hello from Jarvis!"
-Then:
+Using Jarvis
+Click the core to start listening. It cycles through listening, processing, speaking, and back to listening.
 
-List the files in the sandbox.
+Say "bye" (or press STOP) to end the conversation.
 
-Test the Python runner
-Try:
+Approve or deny any edit/delete popup with YES or NO. Esc counts as NO.
 
-Run hello.py
-Jarvis should call run_python and report the script's exit code, stdout, and stderr.
+Open the LOG BOOK tab to see everything Jarvis has done. Filter by FILES, RUN, WEB, or VOICE, or type in the search box.
 
-You can also test the build-and-test loop:
+SHUT DOWN shows the offline screen. BOOT JARVIS brings it back, and QUIT APP closes the whole app.
 
-Create a Python calculator and test it for edge cases.
-Jarvis can create the script, run it with run_python, and use edit_file to fix problems when the test fails.
+Test it
+Say: "Create a file called hello2.py that prints Hello from Jarvis"
+Then: "List the files in the sandbox."
+Then: "Edit hello2.py so it prints a second line." You should see the permission popup with a diff.
+Then: "Run hello.py." Jarvis should call run_python and report the result.
+Then: "Search the web for the official Python asyncio documentation."
+Then check the LOG BOOK tab: every step above should be listed.
 
-Test the web search tool
-Try:
-
-Search the web for the official Python asyncio documentation.
-Jarvis should call web_search, send the query to Tavily, and use the returned results to answer.
-
-The current Tavily implementation uses a basic search with up to five returned results per request.
-
-Test voice input and output
-At the "You:" prompt, type:
-
-voice
-Jarvis will print "Listening... (speak now)" and give you 5 seconds to start talking, capturing up to 15 seconds of speech. Try saying:
-
-List the files in the sandbox.
-Jarvis should print what it heard, run the request as normal, and speak its reply back out loud.
-
-If nothing is heard in time, or the audio can't be understood, Jarvis will say so and let you try again rather than sending an empty request.
+No microphone handy? Open http://127.0.0.1:8765/#dev in your browser and a text box appears so you can type commands instead of speaking.
 
 Security model
 Jarvis does not provide arbitrary shell execution.
 
-Filesystem tools are restricted to the Test/ sandbox. Requests that escape the sandbox should be rejected by the filesystem safety checks.
+Filesystem tools are restricted to the Test/ sandbox. Requests that escape the sandbox are rejected by the filesystem safety checks.
+
+Edits and deletes both require your approval. (In V0.3 only deletes did.) If you close the popup, press Esc, press STOP, or do nothing for 2 minutes, the answer is NO and nothing is changed.
+
+The backend only listens on 127.0.0.1, so other computers cannot reach it. It also rejects WebSocket connections from any page that is not Jarvis itself, so other websites open in your browser cannot talk to it.
 
 run_python only accepts an existing .py file inside Test/. It is a controlled Jarvis tool, but it is not a security sandbox for untrusted Python code: once a script starts, Python itself has normal process privileges.
 
 Web search is separate from filesystem access. web_search can search the public internet through Tavily, but it does not give the model arbitrary browser or computer control.
 
-Voice input only activates when you explicitly type "voice" at the prompt. Jarvis does not listen continuously or record in the background.
+Voice input only starts when you click the core. Jarvis does not listen in the background, and the microphone stops when you press STOP.
+
+On macOS you may be asked to let Terminal or VS Code use the microphone the first time. Click Allow.
 
 Tool architecture
-Agent.py contains the system prompt, Ollama tool schemas, function mapping, and tool-calling loop. It also owns the "voice" command in the input loop and the call to speak() on each reply, since listening and speaking are driven by the user/terminal, not by the model choosing to call a tool.
+app.py starts the server in the background and opens the Jarvis window.
 
-Tools/filesystem.py contains filesystem operations and sandbox enforcement.
+server.py wraps every tool in Agent.FUNCTIONS so each call is logged and sent to the UI, registers the confirmation handler, runs the listen/think/speak loop, and pushes live state to the UI over a WebSocket. Agent.py's own logic is not modified by it.
+
+Agent.py contains the system prompt, Ollama tool schemas, function mapping, and tool-calling loop.
+
+Tools/filesystem.py contains filesystem operations, sandbox enforcement, and set_confirm_handler(), the hook the UI uses to show the Yes/No popup. With no handler registered it falls back to input().
 
 Tools/python_runner.py contains the controlled Python execution tool.
 
 Tools/web_search.py contains the Tavily integration.
 
-Tools/speech_to_text.py contains the microphone listening and transcription logic.
+Tools/speech_to_text.py and Tools/text_to_speech.py contain the microphone and voice-output helpers.
 
-Tools/text_to_speech.py contains the local text-to-speech engine wrapper.
+ui/index.html is a single page (Tailwind, Lucide icons, Orbitron/JetBrains Mono fonts) with the control center, log book, and permission popup.
 
-Tools/__init__.py re-exports the tools so Agent.py can import them from Tools.
+What's new in V0.4
+Added a full desktop UI: a holographic control center with a live voice core, status rings, tool-usage donut, and quick commands.
 
-What's new in V0.3
-Added voice input through Tools/speech_to_text.py: typing "voice" records a phrase from the microphone and transcribes it with the Google Web Speech API.
+Replaced typing "voice" with a clickable core. One click starts a continuous listen/think/speak loop.
 
-Added voice output through Tools/text_to_speech.py: Jarvis now speaks every reply out loud using pyttsx3, in addition to printing it.
+Added a permission popup for edits and deletes. Edits now require approval too, and they show a diff.
 
-listen() and speak() are plain input-loop helpers, not Ollama tools the model calls itself, since they're triggered by the user talking or by Jarvis finishing a reply, not by model decision.
+Added the Log Book: every tool call is recorded with a timestamp, category, detail, and result, and saved to logs/logbook.jsonl.
 
-Kept filesystem operations inside the existing Test/ sandbox.
+Added server.py and app.py so the UI and the existing agent work together without rewriting Agent.py.
 
-Kept run_python and web_search as before, with the same stop-on-write-success / continue-on-read-or-search behavior.
+Added requirements.txt so all dependencies install with one command.
 
-What's new in V0.2.5 (for reference)
-Added modular web research through web_search.
+A denied edit now ends the turn, the same way a denied delete does, so the model does not keep asking.
 
-Added Tavily integration for current internet information, documentation, research, and news.
+Known limitations
+The CALL button is a placeholder and does nothing yet.
 
-Kept run_python as a separate tool so Jarvis can write code and test it instead of only creating files.
+pywebview may not install on very new Python versions. Jarvis falls back to your browser if the native window can't open.
 
-The tool loop supports both Ollama's native tool-call format and the JSON tool-call fallback used by some local Qwen/Ollama combinations.
+Speech recognition and Tavily both need an internet connection.
 
-Write operations still have a safety stop after a successful create_file, edit_file, or delete_file, while run_python and web_search can continue within the tool-call limit.
+The small local model sometimes retries a failing tool. The tool-call limit in Agent.py stops it from looping forever.
 
 Important development notes
 Keep API keys out of source code and out of Git history.
@@ -188,7 +195,12 @@ git status
 git add .
 git commit -m "Describe the change"
 git push
-For major milestones, create a Git tag so older versions remain easy to identify.
+Check that git status does not list .env or logs/ before you commit.
+
+For major milestones, create a Git tag so older versions remain easy to identify:
+
+git tag -a v0.4 -m "Jarvis V0.4 - holographic UI, permission popups, log book"
+git push origin v0.4
 
 Current version
-V0.3 — Modular tools + Python execution + web search + voice input/output
+V0.4 — Voice-first desktop UI + permission popups + log book
