@@ -1,0 +1,186 @@
+Jarvis V0.5
+A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
+
+Project layout
+Jarvis/
+├── App.py                   <- main entry point: starts the server and opens the Jarvis window
+├── Server.py                <- local backend: bridges the UI to the agent over a WebSocket
+├── Agent.py                 <- tool schemas, the tool-calling loop, memory context (also runs in the terminal)
+├── Personality.py           <- Jarvis's persona, example lines, system prompt, voice name
+├── Llm.py                   <- the one place that calls Ollama chat (thinking switched off for speed)
+├── requirements.txt         <- every Python package Jarvis needs
+├── .env                     <- your TAVILY_API_KEY (never committed)
+├── .env.example             <- safe template for .env
+├── Memory/
+│   ├── __init__.py          <- memory facade: remember, recall, forget, context, end_session
+│   ├── store.py             <- reads/writes memory_data/ (profile + memories)
+│   ├── embeddings.py        <- Ollama embeddings + plain numpy cosine search
+│   ├── history.py           <- short-term memory: the last 10 turns
+│   └── summarizer.py        <- end-of-session summary
+├── memory_data/             <- your personal memory (created automatically, never committed)
+│   ├── profile.md
+│   └── memories.jsonl
+├── ui/
+│   └── index.html           <- the whole UI in one file: control center, log book, memory bank, permission popup (works offline)
+├── logs/
+│   └── logbook.jsonl        <- one line per tool call (never committed)
+├── Tools/
+│   ├── __init__.py
+│   ├── filesystem.py        <- sandbox + list/read/create/edit/delete + permission hooks
+│   ├── memory_tools.py      <- remember / recall / forget
+│   ├── clock.py             <- the current date/time, and times in other time zones  (NEW)
+│   ├── python_runner.py
+│   ├── web_search.py
+│   ├── speech_to_text.py
+│   └── text_to_speech.py
+└── Test/
+    └── hello.py
+
+Run Jarvis from inside the Jarvis/ directory so the packages import correctly.
+
+What Jarvis can do
+Everything from V0.4 (voice, control center, permission popups, log book), plus:
+
+A personality. Dry, quick-witted, a little sarcastic, and it drops the jokes when reporting errors. Edit Personality.py to tune it.
+
+A clock. The current date and time of your computer is put into every prompt, so "what time is it?" and "what's tomorrow's date?" just work. For other places, Jarvis uses the get_time tool with a time zone ("what time is it in Tokyo?"). Jarvis can also build schedules with real times and dates and save them to a file (it won't read a long schedule aloud).
+
+Spoken search status. When Jarvis searches the web it says so first ("One moment, sir. Searching for ..."). If the model says it is searching but forgets to actually call the tool, Jarvis runs the search for it, once per turn.
+
+Short-term memory. It remembers the last 10 turns of the conversation, so follow-ups work ("make it print twice" now knows what "it" is).
+
+Long-term memory in three layers:
+  1. Profile (memory_data/profile.md): a short list of core facts, in every prompt. You can edit it by hand. Capped at 500 words.
+  2. Memories (memory_data/memories.jsonl): facts saved with "remember". While there are 12 or fewer, ALL of them go into every prompt, so Jarvis uses them naturally. After that, each turn Jarvis finds the 4 most relevant by meaning.
+  3. Session summaries: when you say "bye", Jarvis writes a short summary of the chat (2 sentences max) and saves it as a memory.
+
+Memory tools: remember, recall, forget. Forgetting asks your permission first. You can also read and delete memories yourself in the MEMORY tab.
+
+Requirements
+A Mac (the voice uses the built-in "say" command; tested on an M4 MacBook Air, 16 GB)
+Python 3.11 or newer (developed on 3.14 via pyenv)
+Ollama (https://ollama.com), with these models:
+  ollama pull qwen3.5:9b          (the chat model)
+  ollama pull nomic-embed-text    (small model used for memory search)
+Run "ollama show qwen3.5:9b" and check that "tools" is listed under Capabilities. If the tag doesn't exist or lacks tools, use "qwen3:8b" and set JARVIS_MODEL=qwen3:8b in .env.
+A free Tavily API key for web search (https://tavily.com)
+portaudio (macOS system library, for the microphone): brew install portaudio
+An internet connection (speech recognition uses Google Web Speech, web_search uses Tavily)
+A working microphone and speakers
+
+Python packages (all in requirements.txt):
+  ollama, tavily-python, python-dotenv, SpeechRecognition, pyaudio, pyttsx3, fastapi, uvicorn[standard], pywebview, numpy
+
+Setup (from scratch)
+1. Get the code:
+     git clone https://github.com/Helloz33/Jarvis.git ~/Jarvis
+     cd ~/Jarvis
+2. Install Ollama, start it (the app, or "ollama serve" in a spare terminal), then pull the models:
+     ollama pull qwen3.5:9b
+     ollama pull nomic-embed-text
+3. Install the microphone library (do this BEFORE the next step, or pyaudio won't build):
+     brew install portaudio
+4. Install the Python packages:
+     python -m pip install -r requirements.txt
+5. Create your .env file from the template and put your real key in it:
+     cp .env.example .env
+     open -e .env        (replace your_real_key_here with your Tavily key, save)
+   Optional lines: JARVIS_MODEL=qwen3:8b and JARVIS_EMBED_MODEL=nomic-embed-text
+6. Make sure .gitignore contains these three lines:
+     .env
+     logs/
+     memory_data/
+   Memory holds personal facts and your conversations. Never upload it.
+7. The first time you run it, macOS asks for microphone permission. Allow it
+   (System Settings > Privacy & Security > Microphone) for your terminal or VS Code.
+
+Run Jarvis
+From inside ~/Jarvis/:   python App.py
+If the native window can't start on your Python version, Jarvis opens the same page in your browser (http://127.0.0.1:8765).
+Terminal mode still works: python Agent.py
+
+Optional shortcut: add this to ~/.zshrc, then run "source ~/.zshrc" and type "jarvis" from anywhere:
+  jarvis() { cd ~/Jarvis && python App.py; }
+
+Using Jarvis
+Click the core to start listening. Say "bye" (or press STOP) to end.
+Approve or deny any edit, delete, forget or permanent-memory popup with YES or NO. Esc counts as NO.
+Open the LOG BOOK to see everything Jarvis has done. Filter by FILES, RUN, WEB, MEMORY or VOICE.
+Open the MEMORY tab to read your profile and memories, and delete any of them (click the X twice).
+No microphone? Open http://127.0.0.1:8765/#dev in a browser for a text box.
+
+First thing to do: tell Jarvis about yourself so it can use it. For example:
+  "Remember that I live in Baden, Pennsylvania."
+  "Remember that my name is Arnav."
+Then check the MEMORY tab. If something doesn't save, you can also type facts into memory_data/profile.md by hand, one per line starting with "- ". The profile is always in the prompt.
+
+Test it
+1. "Remember that my favourite colour is teal."          -> MEMORY entry in the Log Book
+2. "What's my favourite colour?"                         -> answers teal
+3. "What time is it?"                                    -> answers from the clock, no search
+4. "What time is it in Tokyo?"                           -> uses the get_time tool
+5. "Search the web for the Python asyncio docs."         -> says it is searching, then answers
+6. Say "bye", then start again and ask "What did we do last time?"  -> uses the saved summary
+7. "Forget that my favourite colour is teal."           -> popup with the memory text
+8. "Create a file hello2.py that prints hi."            -> answer should sound like Jarvis, not "Created hello2.py."
+9. Check the MEMORY tab: the colour memory is gone after step 7.
+
+Troubleshooting
+"model not installed": run "ollama pull qwen3.5:9b" (or set JARVIS_MODEL in .env).
+"ollama pull" says "blocked redirect to a different host": your network (school/work/public wifi) is intercepting the download. Try a phone hotspot or another network.
+"Note: embedding model ... is not installed": run "ollama pull nomic-embed-text". Until then, memory uses keyword matching.
+pyaudio fails to install: you skipped "brew install portaudio".
+ImportError from Tools or Memory: save every file (unsaved VS Code tabs are empty on disk), and run from inside the Jarvis folder.
+Jarvis ignores something it should know: a 9B model sometimes does. Check the MEMORY tab that the fact is actually saved, and say it again plainly.
+Searches feel slow (30+ seconds): the model reads the results before answering. Normal for a local 9B model.
+
+How memory works (short version)
+Every turn, Agent.run_turn builds the prompt from: the persona + rules, the current date and time, your profile, your memories (all of them while there are 12 or fewer, otherwise the 4 that match what you just said), and the last 10 turns. Matching uses embeddings (a list of numbers capturing meaning) and plain numpy cosine similarity. No vector database is needed at this size. If the embedding model isn't installed, Jarvis falls back to keyword matching.
+
+Security model
+Everything from V0.4 still applies: the Test/ sandbox, approval for edits and deletes, 127.0.0.1-only server, WebSocket origin check.
+
+New in V0.5:
+Forgetting a memory asks first. Saving to the permanent profile asks first.
+Outside content can't write memory silently. If a turn has read a web search, a file, or a script's output, remember asks your permission before saving. This blocks memory poisoning, where a web page says "remember that...".
+Recalled memories are given to the model labelled as data, not instructions.
+memory_data/ is local only. Embeddings and summaries are generated by your local Ollama; nothing is sent anywhere.
+
+Tuning (all plain constants)
+Personality.py: USER_ADDRESS, VOICE, the persona text and example lines
+Memory/history.py: MAX_TURNS (10)
+Memory/__init__.py: RECALL_K (4), RECALL_THRESHOLD (0.4), INCLUDE_ALL_BELOW (12)
+Memory/store.py: PROFILE_WORD_CAP (500), MAX_FACT_CHARS (300)
+Agent.py: MODEL, MAX_TOOL_CALLS, PERSONA_ON_WRITES (one extra short model call so file results sound like Jarvis; set False for speed)
+Llm.py: THINK (False; True lets reasoning models think before answering)
+
+What's new in V0.5
+Long-term memory (profile, retrievable memories, session summaries) and remember/recall/forget tools.
+Short-term conversation history (before, every turn started from zero).
+A personality, in its own file, with a British macOS voice.
+A clock: the current date/time is in every prompt, plus a get_time tool for other time zones.
+Spoken "searching..." status, and an automatic fallback if the model forgets to call web_search.
+Model upgraded from qwen2.5-coder:7b to qwen3.5:9b (configurable).
+The UI is now a single self-contained index.html (no ui/static folder).
+MEMORY category in the Log Book and donut, a Memory Bank tab, and a "wants to forget" popup.
+Edit/delete permission code generalised (ask_permission) so any tool can ask first.
+
+Known limitations
+Not tested on every model: check the model tag and tool support with "ollama show".
+Session summaries only happen when you say "bye" (not on STOP or closing the window).
+The first reply after a model switch is slow while Ollama loads it into RAM.
+With very little matching data the keyword fallback can miss paraphrases; install nomic-embed-text for proper matching.
+No weather tool: it was tried and removed. Ask for the weather and Jarvis will search the web instead.
+Schedules are saved as files; there are no timed reminders that speak at a set time yet.
+The CALL button is still a placeholder.
+
+Important development notes
+Check git status before every commit: .env, logs/ and memory_data/ must not appear.
+git add .
+git commit -m "V0.5: long-term memory, personality, qwen3.5:9b"
+git push
+git tag -a v0.5 -m "Jarvis V0.5 - long-term memory + personality"
+git push origin v0.5
+
+Current version
+V0.5 — Long-term memory + personality
