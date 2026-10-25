@@ -1,6 +1,6 @@
-# Jarvis V0.5
+# Jarvis V0.6
 
-A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
+A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, a schedule you can talk to (with spoken reminders), a "Jarvis wake up" wake word, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
 
 ## Project layout
 
@@ -8,6 +8,7 @@ A local, voice-first assistant built around Ollama, with a holographic control-c
 Jarvis/
 ├── App.py                   <- main entry point: starts the server and opens the Jarvis window
 ├── Server.py                <- local backend: bridges the UI to the agent over a WebSocket
+├── Wake_Jarvis.py           <- tiny always-on script: listens for "Jarvis wake up" and opens the app
 ├── Agent.py                 <- tool schemas, the tool-calling loop, memory context (also runs in the terminal)
 ├── Personality.py           <- Jarvis's persona, example lines, system prompt, voice name
 ├── Llm.py                   <- the one place that calls Ollama chat (thinking switched off for speed)
@@ -23,6 +24,8 @@ Jarvis/
 ├── memory_data/             <- your personal memory (created automatically, never committed)
 │   ├── profile.md
 │   └── memories.jsonl
+├── Schedule_data/           <- your personal schedule (created automatically, never committed)
+│   └── schedule.json
 ├── ui/
 │   └── index.html           <- the whole UI in one file (works offline)
 ├── logs/
@@ -32,6 +35,8 @@ Jarvis/
 │   ├── filesystem.py        <- sandbox + list/read/create/edit/delete + permission hooks
 │   ├── memory_tools.py      <- remember / recall / forget
 │   ├── clock.py             <- current date/time, and times in other time zones
+│   ├── schedule.py          <- the schedule: events, goals, homework, days off, week planner
+│   ├── reminders.py         <- spoken and silent reminders ("Sir, we have ... scheduled for ...")
 │   ├── python_runner.py
 │   ├── web_search.py
 │   ├── speech_to_text.py
@@ -44,7 +49,16 @@ Run Jarvis from inside the `Jarvis/` directory so the packages import correctly.
 
 ## What Jarvis can do
 
-Everything from V0.4 (voice, control center, permission popups, log book), plus:
+Everything from V0.5 (memory, personality, clock, search), plus:
+
+- **A wake word.** Run `Wake_Jarvis.py` and say "Jarvis wake up". It opens the app, which greets you and goes straight to listening, with a sphere that expands into the dashboard.
+- **A schedule you can talk to.** Add, rename, move and delete events by voice ("add a physics session from 3 to 4 PM", "rename the 6 to 7 session to calculus"). The SCHEDULE tab shows the week (Sunday to Saturday) as a calendar with the hours down the left side.
+- **Mandatory commitments are protected.** Classes, club and similar fixed events (and protected time such as sleep and dinner) can't be double-booked, and changing a fixed event asks permission first.
+- **Goals and a week planner.** "Plan my week" fits goals (study, test prep) into free time. Homework has priority and starts a set time after your last commitment: "I have 3 hours of homework on Thursday" re-plans the week, moving other flexible events to another day by itself.
+- **Days off.** "No school Thursday": school, club and gym are skipped that day.
+- **Reminders.** 15 minutes before an event, spoken and as a macOS notification, with quiet hours that hold spoken reminders back. They also work with the window closed (see below).
+
+Earlier versions:
 
 - **A personality.** Dry, quick-witted, a little sarcastic, and it drops the jokes when reporting errors. Edit `Personality.py` to tune it.
 - **A clock.** The current date and time is in every prompt, so "what time is it?" just works. For other places Jarvis uses the `get_time` tool ("what time is it in Tokyo?"). It can also build schedules with real times and dates and save them to a file.
@@ -66,10 +80,11 @@ Everything from V0.4 (voice, control center, permission popups, log book), plus:
   - Run `ollama show qwen3.5:9b` and check that "tools" is listed under Capabilities. If not, use `qwen3:8b` and set `JARVIS_MODEL=qwen3:8b` in `.env`.
 - A free [Tavily](https://tavily.com) API key for web search
 - portaudio for the microphone: `brew install portaudio`
+- For the wake word: `faster-whisper` (installed by `requirements.txt`; the tiny speech model downloads once on first run)
 - Internet (speech recognition uses Google Web Speech, web search uses Tavily)
 - A working microphone and speakers
 
-Python packages (all in `requirements.txt`): ollama, tavily-python, python-dotenv, SpeechRecognition, pyaudio, pyttsx3, fastapi, uvicorn[standard], pywebview, numpy.
+Python packages (all in `requirements.txt`): ollama, tavily-python, python-dotenv, SpeechRecognition, pyaudio, pyttsx3, fastapi, uvicorn[standard], pywebview, numpy, faster-whisper.
 
 ## Setup (from scratch)
 
@@ -102,6 +117,8 @@ Python packages (all in `requirements.txt`): ollama, tavily-python, python-doten
    .env
    logs/
    memory_data/
+   Schedule_data/
+   models/
    ```
 7. The first run, macOS asks for microphone permission. Allow it (System Settings > Privacy & Security > Microphone) for your terminal or VS Code.
 
@@ -120,6 +137,45 @@ Optional shortcut: add this to `~/.zshrc`, run `source ~/.zshrc`, then type `jar
 ```bash
 jarvis() { cd ~/Jarvis && python App.py; }
 ```
+
+## Wake word and reminders (optional)
+
+`Wake_Jarvis.py` is a tiny script that listens for "Jarvis wake up" with a small local speech model, then opens Jarvis. It also delivers schedule reminders when the app is closed.
+
+Try it first: `python Wake_Jarvis.py`, then say "Jarvis wake up". macOS asks for microphone access the first time.
+
+To keep it running in the background, create `~/Library/LaunchAgents/com.jarvis.wake.plist` (replace both paths with your own, using full absolute paths) and load it:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.jarvis.wake</string>
+  <key>ProgramArguments</key><array>
+    <string>/Users/YOU/.pyenv/versions/3.14.8/bin/python</string>
+    <string>/Users/YOU/Jarvis/Wake_Jarvis.py</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Background</string>
+</dict></plist>
+```
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.jarvis.wake.plist
+```
+
+## Your schedule
+
+Your schedule is one file, `Schedule_data/schedule.json`, created on first run and never committed. Edit it by hand or just tell Jarvis. Handy things to say:
+
+- "What's my schedule for today?" / "How is my schedule looking?"
+- "Add an hour of physics at 4 PM." / "Set a study session from 6 to 7 PM."
+- "Rename the 6 to 7 PM session to calculus."
+- "Set my homework to 90 minutes." / "I have 3 hours of homework on Thursday."
+- "No school on Friday." / "Plan my week."
+
+Reminders come 15 minutes ahead. Events with `"remind": false` (e.g. school) never remind. Settings live under `settings.reminders` in the schedule file: `lead_minutes` and `quiet_until` (a time per weekday, e.g. `{"MO": "18:00"}`). Spoken reminders are held until quiet hours end; an event inside quiet hours gets a silent notification.
 
 ## Using Jarvis
 
@@ -177,6 +233,16 @@ New in V0.5:
 - `Agent.py`: MODEL, MAX_TOOL_CALLS, PERSONA_ON_WRITES (set False for speed)
 - `Llm.py`: THINK (True lets reasoning models think before answering)
 
+## What's new in V0.6
+
+- Wake word ("Jarvis wake up") with an always-on script, and a sphere wake-up animation
+- Jarvis greets you and goes straight to listening
+- Schedule system: events, protected time, conflict checks with free-time suggestions, goals, homework priority, days off, a week planner
+- SCHEDULE tab: a Sunday-to-Saturday calendar with hours down the left side, live updates
+- Spoken and silent reminders with quiet hours (`Tools/reminders.py`)
+- Plain "add / rename / homework" requests are handled directly (more reliable than leaving it to the model), and Jarvis no longer claims it changed the schedule unless it did
+- Fix: the Log Book is no longer hidden under the wake-up overlay
+
 ## What's new in V0.5
 
 - Long-term memory (profile, retrievable memories, session summaries) and remember/recall/forget tools
@@ -196,19 +262,20 @@ New in V0.5:
 - The first reply after a model switch is slow while Ollama loads it.
 - With little data, the keyword fallback can miss paraphrases; install `nomic-embed-text`.
 - No weather tool (tried and removed). Ask for the weather and Jarvis searches the web.
-- Schedules are saved as files; there are no timed reminders that speak yet.
+- The SCHEDULE tab is view-only; change things by talking to Jarvis or editing `schedule.json`.
+- Speech recognition (Google) sometimes mishears times; say "from 6:10 to 6:40 PM" in one go.
 - The CALL button is still a placeholder.
 
 ## Development notes
 
-Check `git status` before every commit: `.env`, `logs/` and `memory_data/` must not appear.
+Check `git status` before every commit: `.env`, `logs/`, `memory_data/`, `Schedule_data/` and `models/` must not appear.
 
 ```bash
 git add .
-git commit -m "V0.5: long-term memory, personality, qwen3.5:9b"
+git commit -m "V0.6: wake word, schedule, reminders"
 git push
-git tag -a v0.5 -m "Jarvis V0.5 - long-term memory + personality"
-git push origin v0.5
+git tag -a v0.6 -m "Jarvis V0.6 - wake word, schedule, reminders"
+git push origin v0.6
 ```
 
-**Current version:** V0.5, long-term memory + personality
+**Current version:** V0.6, wake word, schedule and reminders

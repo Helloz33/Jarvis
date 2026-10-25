@@ -11,3 +11,5 @@ logs/
 memory_data/
 logs/
 .env
+Schedule_data/
+models/

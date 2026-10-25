@@ -94,9 +94,33 @@ linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-grad
 .chip.on{color:var(--cy);border-color:var(--cy);background:rgba(34,211,238,.08)}
 @media(max-width:640px){.lrow{grid-template-columns:1fr auto}.lrow .d{grid-column:1/-1;order:3}}
 @media(prefers-reduced-motion:reduce){.ring,.aura,.core{animation:none}}
+/* Wake-up: a point of light expands into a sphere that reveals the dashboard */
+@property --r{syntax:"<length>";inherits:true;initial-value:0px}
+@keyframes jv-expand{from{--r:0px}to{--r:120vmax}}
+@keyframes jv-settle{from{transform:scale(.82);filter:blur(6px)}to{transform:none;filter:none}}
+@keyframes jv-ringfade{0%,70%{opacity:1}100%{opacity:0}}
+:root{animation:jv-expand 1.4s cubic-bezier(.65,0,.2,1) .25s both}
+main{animation:jv-settle 1.4s cubic-bezier(.2,.8,.2,1) .25s backwards}
+.sgrid{display:grid;gap:8px;grid-template-columns:repeat(7,minmax(0,1fr))}@media(max-width:1000px){.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sgrid{grid-template-columns:1fr}}
+
+.tg{display:grid;grid-template-columns:54px repeat(7,minmax(104px,1fr));min-width:820px}
+.tg-h{padding:8px 6px;border-bottom:1px solid rgba(34,211,238,.18);position:sticky;top:0;background:rgba(5,8,12,.92);z-index:3}
+.tg-g{position:relative}.tg-g span{position:absolute;right:8px;transform:translateY(-50%);font-size:10px;color:var(--dim);white-space:nowrap}
+.tg-c{position:relative;border-left:1px solid rgba(34,211,238,.12);background-image:linear-gradient(to bottom,rgba(34,211,238,.11) 1px,transparent 1px);background-size:100% var(--hh)}
+.tg-c.today{background-color:rgba(34,211,238,.045)}
+.tg-b{position:absolute;box-sizing:border-box;border-radius:4px;padding:2px 6px;overflow:hidden;font-size:11px;line-height:1.25;border:1px solid;background:rgba(34,211,238,.14);border-color:rgba(34,211,238,.55);color:#cffafe}
+.tg-b.fixed{background:rgba(251,191,36,.13);border-color:rgba(251,191,36,.6);color:#fde68a}
+.tg-b.prot{background:repeating-linear-gradient(135deg,rgba(148,163,184,.08) 0 6px,transparent 6px 12px);border:1px dashed rgba(148,163,184,.3);color:var(--dim);font-size:10px}
+.tg-b small{display:block;opacity:.7;font-size:10px}
+.tg-now{position:absolute;left:0;right:0;height:0;border-top:2px solid #f87171;z-index:2;pointer-events:none}
+.tg-now:before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:#f87171}
+#veil{position:fixed;inset:0;z-index:9998;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent var(--r),#05070b calc(var(--r) + 2px))}
+body::after{content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent calc(var(--r) - 70px),rgba(80,200,255,.18) calc(var(--r) - 6px),rgba(190,245,255,.95) var(--r),transparent calc(var(--r) + 14px));animation:jv-ringfade 1.65s ease-out both}
+@media(prefers-reduced-motion:reduce){:root{animation:none;--r:120vmax}main{animation:none}body::after{display:none}#veil{display:none}}
 </style>
 </head>
 <body class="font-mono text-[13px] min-h-screen">
+<div id="veil"></div>
 <div class="fixed inset-0 pointer-events-none" style="background:radial-gradient(circle at 15% 12%,rgba(139,92,246,.16),transparent 40%),radial-gradient(circle at 85% 88%,rgba(34,211,238,.15),transparent 42%),linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,rgba(34,211,238,.035) 1px,transparent 1px) 0 0/48px 48px"></div>
 <div class="fixed inset-0 pointer-events-none opacity-[.06]" style="background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)"></div>
 
@@ -106,6 +130,7 @@ linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-grad
   <nav class="flex gap-2" aria-label="Views">
     <button class="tab on" data-view="control"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>CONTROL CENTER</button>
     <button class="tab" data-view="log"><i data-lucide="scroll-text" class="w-4 h-4"></i>LOG BOOK</button>
+    <button class="tab" data-view="sched"><i data-lucide="calendar-days" class="w-4 h-4"></i>SCHEDULE</button>
     <button class="tab" data-view="mem"><i data-lucide="brain" class="w-4 h-4"></i>MEMORY</button>
   </nav>
   <div class="text-right"><div class="flex items-center gap-2 justify-end"><span class="w-2 h-2 rounded-full bg-green-400" style="box-shadow:0 0 8px #4ade80"></span><span id="clock" class="text-xs text-cyan-100">--:--:--</span></div><div id="link" class="micro">LINK // CONNECTING</div></div>
@@ -117,7 +142,7 @@ linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-grad
     <div class="glass p-4">
       <div class="micro mb-2 flex items-center gap-2"><i data-lucide="cpu" class="w-3 h-3"></i>SYS_STATUS // 0x4F</div>
       <div class="row"><span class="text-slate-400">Model</span><span id="model">--</span></div>
-      <div class="row"><span class="text-slate-400">Iteration</span><span id="iter" class="text-cyan-300">V0.5</span></div>
+      <div class="row"><span class="text-slate-400">Iteration</span><span id="iter" class="text-cyan-300">V0.6</span></div>
       <div class="row"><span class="text-slate-400">Mode</span><span class="text-green-400">VOICE</span></div>
       <div class="row"><span class="text-slate-400">Uptime</span><span id="up">00:14:08</span></div>
     </div>
@@ -177,6 +202,8 @@ linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-grad
       <div class="row mt-2"><span class="text-slate-400">Edits</span><span class="text-amber-400">ASK FIRST</span></div>
       <div class="row"><span class="text-slate-400">Deletes</span><span class="text-red-400">ASK FIRST</span></div>
       <div class="row"><span class="text-slate-400">Forgetting</span><span class="text-red-400">ASK FIRST</span></div>
+      <div class="row"><span class="text-slate-400">Schedule</span><span class="text-cyan-300">VIA TOOLS</span></div>
+      <div class="row"><span class="text-slate-400">Schedule_data/</span><span class="text-green-400">READ ONLY</span></div>
       <div class="row"><span class="text-slate-400">Outside Test/</span><span class="text-green-400">BLOCKED</span></div>
     </div>
   </div>
@@ -193,6 +220,18 @@ linear-gradient(var(--rd),var(--rd)) bottom right/14px 2px no-repeat,linear-grad
     </div>
     <div class="lrow micro" style="color:var(--dim)"><span>TIME</span><span>TOOL</span><span class="d">DETAIL</span><span>RESULT</span></div>
     <div id="rows"></div>
+  </div>
+</section>
+<section id="v-sched" class="hidden p-3">
+  <div class="glass">
+    <div class="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-cyan-400/15">
+      <div><div class="font-orb tracking-[.2em] text-cyan-300">SCHEDULE</div><div class="micro" id="schedRange">WEEK_PLAN // 0x80</div></div>
+      <div class="flex gap-2"><button class="btn" id="schedPrev" aria-label="Previous week"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button class="btn" id="schedToday">TODAY</button><button class="btn" id="schedNext" aria-label="Next week"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div>
+    </div>
+    <div id="schedErr" class="hidden p-4 text-xs" style="color:var(--rd)"></div>
+    <div id="schedGrid" class="p-3 overflow-x-auto"></div>
+    <div class="p-4 border-t border-cyan-400/15"><div class="micro mb-2">GOALS // PLANNED BY "PLAN MY WEEK"</div><div id="schedGoals" class="text-xs text-cyan-100"></div></div>
+    <div class="px-4 pb-4 micro">VIEW ONLY // ASK JARVIS TO ADD, MOVE OR DELETE ITEMS</div>
   </div>
 </section>
 <section id="v-mem" class="hidden p-3">
@@ -276,6 +315,47 @@ function renderMem(m){
   $('#memProfile').textContent=m.profile||'(empty)';
   $('#memRows').innerHTML=m.items.length?m.items.map(i=>`<div class="lrow" style="grid-template-columns:90px 1fr 110px 56px"><span style="color:var(--dim)">${esc(i.created)}</span><span class="d" style="white-space:normal">${esc(i.text)}</span><span style="color:var(--dim)">${esc(i.source)}</span><button class="memdel" data-id="${esc(i.id)}" aria-label="Delete memory ${esc(i.id)}" style="color:var(--rd)">&#10005;</button></div>`).join(''):'<div class="p-6 text-center text-slate-500">No memories yet. Try: "Remember that I like my coffee black."</div>';
 }
+let lastSched=null;
+const HH=44,mins=t=>{const [a,b]=String(t).split(':');return (+a)*60+(+b)},ampm=h=>(h%24===0?'12 AM':h%24<12?(h%12||12)+' AM':h%24===12?'12 PM':(h%12)+' PM');
+function drawGrid(m){
+  lastSched=m;
+  let lo=360,hi=1440;
+  m.days.forEach(d=>d.events.forEach(e=>{lo=Math.min(lo,Math.floor(mins(e.start)/60)*60);hi=Math.max(hi,Math.ceil(mins(e.end)/60)*60)}));
+  const rows=(hi-lo)/60,H=rows*HH;
+  const gutter=`<div class="tg-g" style="height:${H}px">${Array.from({length:rows},(_,i)=>`<span style="top:${i*HH}px">${i?ampm(lo/60+i):''}</span>`).join('')}</div>`;
+  const heads=m.days.map(d=>`<div class="tg-h"><div class="micro" style="color:${d.today?'var(--cy)':'var(--dim)'}">${esc(d.label)}</div>${d.off?`<div style="color:var(--gr);font-size:10px">&#9733; ${esc(d.off).toUpperCase()}</div>`:''}</div>`).join('');
+  const cols=m.days.map(d=>{
+    const blocks=[];
+    (d.protected||[]).filter(p=>p.title.toLowerCase()!=='sleep').forEach(p=>blocks.push({t:p.title,s:mins(p.start),e:mins(p.end),c:'prot'}));
+    const evs=d.events.map(e=>({t:e.title,s:mins(e.start),e:mins(e.end),c:e.kind==='fixed'?'fixed':'',a:e.start,b:e.end}));
+    // side by side when two events overlap
+    evs.sort((x,y)=>x.s-y.s);let group=[],gEnd=0;const lanes=[];
+    evs.forEach(e=>{if(e.s>=gEnd){group=[];gEnd=0}let l=0;while(group.some(g=>g.l===l&&g.e>e.s))l++;e.l=l;e.g=group;group.push(e);gEnd=Math.max(gEnd,e.e)});
+    evs.forEach(e=>{e.n=Math.max(...e.g.map(g=>g.l))+1});
+    const html=blocks.map(b=>blk(b,lo,1,0)).join('')+evs.map(e=>blk(e,lo,e.n,e.l)).join('');
+    return `<div class="tg-c${d.today?' today':''}" data-date="${d.date}" style="height:${H}px;--hh:${HH}px">${html}</div>`}).join('');
+  $('#schedGrid').innerHTML=`<div class="tg">${'<div class="tg-h"></div>'}${heads}${gutter}${cols}</div>`;
+  nowLine();
+}
+function blk(b,lo,n,l){const top=(b.s-lo)/60*HH,h=Math.max(18,(b.e-b.s)/60*HH-2),w=100/n;
+  const time=b.a?`<small>${esc(b.a)}-${esc(b.b)}</small>`:'';
+  return `<div class="tg-b ${b.c}" style="top:${top}px;height:${h}px;left:calc(${l*w}% + 2px);width:calc(${w}% - 4px)" title="${esc(b.t)}"><b style="font-weight:600">${esc(b.t)}</b>${h>34?time:''}</div>`}
+function nowLine(){document.querySelectorAll('.tg-now').forEach(n=>n.remove());if(!lastSched)return;
+  const col=document.querySelector('.tg-c.today');if(!col)return;
+  let lo=360;lastSched.days.forEach(d=>d.events.forEach(e=>{lo=Math.min(lo,Math.floor(mins(e.start)/60)*60)}));
+  const n=new Date(),m=n.getHours()*60+n.getMinutes();if(m<lo)return;
+  const l=document.createElement('div');l.className='tg-now';l.style.top=((m-lo)/60*HH)+'px';col.appendChild(l)}
+setInterval(nowLine,60000);
+let schedStart='';
+function renderSched(m){
+  if(m.error){$('#schedErr').textContent='Schedule unavailable: '+m.error;vis($('#schedErr'),true);return}
+  vis($('#schedErr'),false);schedStart=m.start;
+  $('#schedRange').textContent='WEEK OF '+m.start;
+  const kc={fixed:'var(--am)',flexible:'var(--cy)'};
+  drawGrid(m);
+  $('#schedGoals').innerHTML=m.goals.length?m.goals.map(g=>`<div class="row"><span>${esc(g.title)}</span><span style="color:var(--dim)">${esc(g.minutes)} min / ${esc(g.per)}</span></div>`).join(''):'<span style="color:var(--dim)">No goals yet. Tell Jarvis, e.g. "I want 2 hours of physics a week".</span>';
+}
+function shiftWeek(n){const d=new Date(schedStart||Date.now());d.setDate(d.getDate()+n*7);send({type:'list_schedule',start:d.toISOString().slice(0,10)})}
 function closeConfirm(){askId=null;vis($('#modal'),false)}
 function answer(ok){if(!askId)return;send({type:'confirm_answer',id:askId,ok});closeConfirm()}
 
@@ -289,6 +369,7 @@ function on(m){
     case 'state':setState(m.state);break;
     case 'log':logs.unshift(m.entry);calls=m.calls;counts=m.counts;$('#files').textContent=m.files;setMem(m.memory);paint();renderLog();break;
     case 'memories':renderMem(m);break;
+    case 'schedule':renderSched(m);break;
     case 'heard':$('#heard').textContent='YOU // '+m.text;$('#reply').textContent='';break;
     case 'reply':$('#reply').textContent='JARVIS // '+m.text;if(m.latency_ms)$('#lat').textContent=m.latency_ms+' ms';break;
     case 'confirm':showConfirm(m);break;
@@ -308,8 +389,11 @@ $$('[data-view]').forEach(b=>b.onclick=()=>{
   $('#v-control').classList.toggle('hidden',b.dataset.view!=='control');
   $('#v-log').classList.toggle('hidden',b.dataset.view!=='log');
   $('#v-mem').classList.toggle('hidden',b.dataset.view!=='mem');
+  $('#v-sched').classList.toggle('hidden',b.dataset.view!=='sched');
+  if(b.dataset.view==='sched')send({type:'list_schedule',start:schedStart});
   if(b.dataset.view==='mem')send({type:'list_memories'});
 });
+$('#schedPrev').onclick=()=>shiftWeek(-1);$('#schedNext').onclick=()=>shiftWeek(1);$('#schedToday').onclick=()=>send({type:'list_schedule'});
 $('#memRefresh').onclick=()=>send({type:'list_memories'});
 $('#memRows').addEventListener('click',e=>{const b=e.target.closest('.memdel');if(!b)return;
   if(b.dataset.armed){send({type:'delete_memory',id:b.dataset.id});return}
@@ -332,6 +416,12 @@ setInterval(()=>{const up=Math.max(0,Math.floor(Date.now()/1000-started)),p=n=>S
 $('#clock').textContent=new Date().toLocaleTimeString('en-GB');paint();renderLog();
 try{lucide.createIcons()}catch(e){}
 connect();
+</script>
+<script>
+/* After the wake-up reveal, remove the overlay (it never touches the page layout) */
+(function(){function done(){var v=document.getElementById("veil");if(v)v.remove()}
+document.documentElement.addEventListener("animationend",function(e){if(e.animationName==="jv-expand")done()});
+setTimeout(done,2200)})();
 </script>
 </body>
 </html>

@@ -20,24 +20,33 @@ from Personality import (
     build_system_prompt,
     search_announcement,
 )
+from Tools.schedule import find_rename_target, parse_add_request, parse_homework_request, sounds_like_add
 from Tools import (
     SANDBOX,
     UNTRUSTED_TOOLS,
+    add_event,
+    adjust_homework,
     create_file,
+    delete_event,
     delete_file,
     edit_file,
     forget,
     get_time,
     list_files,
+    list_schedule,
     listen,
     mark_untrusted,
     now_line,
+    plan_week,
     read_file,
     recall,
     remember,
     reset_untrusted,
     run_python,
+    set_day_off,
+    set_goal,
     speak,
+    update_event,
     web_search,
 )
 
@@ -220,6 +229,174 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "list_schedule",
+            "description": (
+                "Show the user's schedule for a day or a range of days "
+                "(up to 14). Use for 'what's my day/week like'. Dates: "
+                "YYYY-MM-DD, today, tomorrow or a weekday name."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {"type": "string", "description": "First day. Default today."},
+                    "end_date": {"type": "string", "description": "Last day. Default same as start."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_event",
+            "description": (
+                "Add something to the schedule. One-off: give date. "
+                "Repeating weekly: give repeat_days such as 'mon,wed,fri' "
+                "(date then optionally sets the first day). kind is "
+                "'flexible' normally, or 'fixed' for classes, school, work "
+                "and other mandatory commitments. Fails with a clear reason "
+                "if it overlaps something; then offer the free times it lists."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "start": {"type": "string", "description": "e.g. 15:00 or 3 pm"},
+                    "end": {"type": "string", "description": "e.g. 16:30 or 4:30 pm"},
+                    "duration_minutes": {"type": "integer", "description": "Use instead of end, e.g. 60 for an hour."},
+                    "date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday. Default today."},
+                    "repeat_days": {"type": "string"},
+                    "kind": {"type": "string", "enum": ["flexible", "fixed"]},
+                    "until": {"type": "string", "description": "Last day of a repeating event."},
+                },
+                "required": ["title", "start"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_event",
+            "description": (
+                "Change a scheduled event: move it, rename it or change its "
+                "length. event_id comes from list_schedule (or the exact "
+                "title). Only pass the fields that change. Changing a fixed "
+                "event asks the user first."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "date": {"type": "string"},
+                    "start": {"type": "string"},
+                    "end": {"type": "string"},
+                    "repeat_days": {"type": "string"},
+                    "until": {"type": "string"},
+                },
+                "required": ["event_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_event",
+            "description": (
+                "Delete a scheduled event by id (from list_schedule) or "
+                "exact title. Deleting a fixed event asks the user first."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"event_id": {"type": "string"}},
+                "required": ["event_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_goal",
+            "description": (
+                "Set a recurring time goal such as homework or study, e.g. "
+                "title 'Homework', minutes 120, per 'day'; or 'Physics "
+                "self-study', 120, per 'week'. minutes=0 removes the goal. "
+                "After changing goals, call plan_week."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "minutes": {"type": "integer"},
+                    "per": {"type": "string", "enum": ["day", "week"]},
+                    "session_minutes": {"type": "integer", "description": "Longest single session."},
+                    "days": {"type": "string", "description": "Optional, e.g. 'weekdays'."},
+                    "buffer_minutes": {"type": "integer", "description": "Start this long after the day's last fixed commitment."},
+                },
+                "required": ["title", "minutes"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_day_off",
+            "description": (
+                "Mark a day or range of days as off school (holiday, break, "
+                "snow day). School is skipped on those days. remove=true "
+                "undoes it. Afterwards call plan_week."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {"type": "string", "description": "e.g. 2026-11-26 or 'friday'."},
+                    "end_date": {"type": "string", "description": "Last day off, if more than one."},
+                    "title": {"type": "string", "description": "e.g. 'Thanksgiving break'."},
+                    "remove": {"type": "boolean"},
+                },
+                "required": ["start_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "adjust_homework",
+            "description": (
+                "Set how much homework there is on ONE day, e.g. 'I have 3 "
+                "hours of homework on Thursday' = minutes 180, date thursday; "
+                "'no homework Friday' = 0. Homework has priority: other "
+                "flexible events in the way are moved to another day. The "
+                "week is re-planned automatically."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "minutes": {"type": "integer"},
+                    "date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday. Default today."},
+                },
+                "required": ["minutes"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "plan_week",
+            "description": (
+                "Fit all the user's goals (homework, study, test prep) into "
+                "the free time of a week. Replaces the earlier automatic "
+                "plan for that week. start_date is any day in the week; "
+                "default is this week."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"start_date": {"type": "string"}},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "remember",
             "description": (
                 "Save one short fact about the user to long-term memory. Use "
@@ -279,6 +456,14 @@ FUNCTIONS = {
     "run_python": run_python,
     "web_search": web_search,
     "get_time": get_time,
+    "list_schedule": list_schedule,
+    "add_event": add_event,
+    "update_event": update_event,
+    "delete_event": delete_event,
+    "set_goal": set_goal,
+    "set_day_off": set_day_off,
+    "adjust_homework": adjust_homework,
+    "plan_week": plan_week,
     "remember": remember,
     "recall": recall,
     "forget": forget,
@@ -312,6 +497,22 @@ _PROMISE_RE = re.compile(
     r"let me (check|look|find|search|pull)|checking the web|pulling up)\b",
     re.IGNORECASE,
 )
+
+
+
+_SCHEDULE_TOOLS = {"add_event", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
+
+# The model says it changed the schedule ("I've added...") without calling a tool.
+_CLAIM_RE = re.compile(
+    r"\b(i('| ha)?ve|i|we|has been|have been|is now|are now|now)\b[^.?!]{0,40}"
+    r"\b(added|scheduled|booked|put|placed|moved|rescheduled|updated|removed|deleted|"
+    r"cancel(l)?ed|set|confirmed)\b|\b(added|scheduled|booked) (it|that|them)\b",
+    re.IGNORECASE,
+)
+
+
+def _claims_schedule_change(content: str) -> bool:
+    return bool(content) and len(content) < 400 and "?" not in content and bool(_CLAIM_RE.search(content))
 
 
 def _promises_search(content: str) -> bool:
@@ -350,10 +551,79 @@ def _calls_from_content(content: str) -> list:
     return []
 
 
+def _quick_schedule(user_text: str) -> str | None:
+    """Plain 'add ... at 3 pm' requests are handled directly (see parse_add_request)."""
+    try:
+        previous = next((m["content"] for m in reversed(Memory.history.messages())
+                         if m.get("role") == "user"), "")
+        args = parse_add_request(user_text, previous)
+    except Exception:
+        return None
+    if not args:
+        other = _quick_homework(user_text) or _quick_rename(user_text)
+        if other:
+            return other
+        if sounds_like_add(user_text):
+            return ("I could not make out the time. Say it in one go, for example: "
+                    "add a study session from 6:10 to 6:40 PM.")
+        return None
+    result = FUNCTIONS["add_event"](**args)
+    if not isinstance(result, str):
+        return None
+    if result.startswith("Added"):
+        return _phrase(result)
+    if result.startswith("Error: that conflicts with " + args["title"]):
+        return f"{args['title']} is already on your schedule, sir."
+    return "I could not add that. " + result.removeprefix("Error: ")
+
+
+def _quick_homework(user_text: str) -> str | None:
+    """'I have 3 hours of homework on Thursday' / 'set homework to 90 minutes'."""
+    try:
+        parsed = parse_homework_request(user_text)
+    except Exception:
+        return None
+    if not parsed:
+        return None
+    kind, minutes, dayword = parsed
+    if kind == "day":
+        result = FUNCTIONS["adjust_homework"](minutes=minutes, date=dayword)
+    else:
+        FUNCTIONS["set_goal"](title="Homework", minutes=minutes, per="day", buffer_minutes=0)
+        result = f"Homework is now {minutes} minutes a day.\n" + str(FUNCTIONS["plan_week"]())
+    if not isinstance(result, str) or result.startswith("Error"):
+        return "I could not change the homework. " + str(result).removeprefix("Error: ")
+    first = result.splitlines()[0]
+    moved = next((l for l in result.splitlines() if l.startswith("Moved to make room")), "")
+    return first + (" " + moved.replace("Moved to make room for homework: ", "I moved ") + "." if moved else "")
+
+
+def _quick_rename(user_text: str) -> str | None:
+    """'name that session calculus' -> update_event, handled directly."""
+    try:
+        found = find_rename_target(user_text)
+    except Exception:
+        return None
+    if found is None:
+        return None
+    if isinstance(found, str):
+        return found
+    event_id, new_title = found
+    result = FUNCTIONS["update_event"](event_id=event_id, title=new_title)
+    if isinstance(result, str) and result.startswith("Updated"):
+        return _phrase(result)
+    return "I could not rename it. " + str(result).removeprefix("Error: ")
+
+
 def run_turn(user_text: str) -> str:
     """Run one request: build memory context, run the tool loop, remember it."""
 
     reset_untrusted()
+
+    quick = _quick_schedule(user_text)
+    if quick:
+        Memory.history.add_turn(user_text, quick)
+        return quick
 
     try:
         profile, memories = Memory.context_for(user_text)
@@ -412,6 +682,8 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
     calls_used = 0
     web_called = False
     search_forced = False
+    sched_called = False
+    sched_nudged = False
 
     while calls_used < MAX_TOOL_CALLS:
         response = Llm.chat(MODEL, messages, TOOLS)
@@ -434,6 +706,26 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
                 ):
                     search_forced = True
                     calls = [_make_call("web_search", {"query": user_text})]
+                elif (
+                    not sched_called
+                    and not sched_nudged
+                    and _claims_schedule_change(content)
+                ):
+                    # It claimed a schedule change without calling a tool. Make it
+                    # actually do it (or admit nothing changed) instead of lying.
+                    sched_nudged = True
+                    messages.append(message)
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "You said the schedule was changed, but you did not call a tool, "
+                            "so nothing changed. If I asked for a change, call add_event, "
+                            "update_event, delete_event, set_goal or set_day_off now with exact "
+                            "values (title, date YYYY-MM-DD or 'today', start and end as HH:MM). "
+                            "If something is missing, ask me one short question instead."
+                        ),
+                    })
+                    continue
                 else:
                     return content or "Done."
 
@@ -454,6 +746,9 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
                     if name == "web_search":
                         web_called = True
                         _announce(search_announcement(arguments.get("query", "")))
+
+                    if name in _SCHEDULE_TOOLS:
+                        sched_called = True
 
                     result = FUNCTIONS[name](**arguments)
 
@@ -567,7 +862,7 @@ def main() -> None:
 
     SANDBOX.mkdir(parents=True, exist_ok=True)
 
-    print("Jarvis V0.5")
+    print("Jarvis V0.6")
     print(f"Model:   {MODEL}")
     print(f"Sandbox: {SANDBOX}")
     print(

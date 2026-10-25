@@ -22,11 +22,12 @@ from fastapi.responses import FileResponse
 
 import Agent
 import Memory
-from Personality import VOICE
-from Tools import SANDBOX, listen, set_confirm_handler, speak
+from Personality import AUTO_LISTEN_ON_START, VOICE, greeting
+from Tools import SANDBOX, listen, reminders, set_confirm_handler, speak
+from Tools.schedule import week_view
 
 PORT = 8765
-ITERATION = "V0.5"
+ITERATION = "V0.6"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
 LOG_FILE = ROOT / "logs" / "logbook.jsonl"
@@ -39,8 +40,10 @@ ALLOWED_ORIGINS = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
 CATEGORY = {
     "list_files": "FILES", "read_file": "FILES", "create_file": "FILES",
     "edit_file": "FILES", "delete_file": "FILES",
-    "run_python": "RUN", "web_search": "WEB",
+    "run_python": "RUN", "web_search": "WEB", "get_time": "RUN",
     "remember": "MEMORY", "recall": "MEMORY", "forget": "MEMORY",
+    "list_schedule": "RUN", "add_event": "RUN", "update_event": "RUN",
+    "delete_event": "RUN", "set_goal": "RUN", "set_day_off": "RUN", "adjust_homework": "RUN", "plan_week": "RUN",
 }
 
 
@@ -66,6 +69,8 @@ def classify(result) -> str:
 def describe(name: str, kwargs: dict, result) -> str:
     if name == "web_search":
         return str(kwargs.get("query", ""))
+    if name == "get_time":
+        return str(kwargs.get("timezone", "")) or "local time"
     if name == "list_files":
         return "Test/"
     if name == "remember":
@@ -74,6 +79,16 @@ def describe(name: str, kwargs: dict, result) -> str:
         return str(kwargs.get("query", ""))
     if name == "forget":
         return str(kwargs.get("memory_id", ""))
+    if name in ("add_event", "set_goal"):
+        return str(kwargs.get("title", ""))
+    if name == "adjust_homework":
+        return f"{kwargs.get('minutes', '')} min {kwargs.get('date', 'today')}"
+    if name == "set_day_off":
+        return str(kwargs.get("start_date", ""))
+    if name in ("update_event", "delete_event"):
+        return str(kwargs.get("event_id", ""))
+    if name in ("list_schedule", "plan_week"):
+        return str(kwargs.get("start_date", "")) or "this week"
     detail = str(kwargs.get("path", ""))
     if name == "run_python" and isinstance(result, str) and result:
         detail += f"  ({result.splitlines()[0]})"
@@ -176,6 +191,9 @@ class Hub:
 hub = Hub()
 
 
+SCHEDULE_TOOLS = {"add_event", "update_event", "delete_event", "set_goal", "set_day_off", "adjust_homework", "plan_week"}
+
+
 def instrument_tools() -> None:
     """Wrap every Agent tool so calls are logged and sent to the UI."""
     def make(name, fn):
@@ -188,6 +206,8 @@ def instrument_tools() -> None:
                 raise
             hub.add_log(name, CATEGORY.get(name, "FILES"),
                         describe(name, kwargs, result), classify(result))
+            if name in SCHEDULE_TOOLS:
+                hub.emit(schedule_view())   # keep the SCHEDULE tab live
             return result
         return wrapped
 
@@ -219,6 +239,12 @@ def memory_list() -> dict:
     }
 
 
+def schedule_view(start: str = "") -> dict:
+    view = week_view(start)
+    view["type"] = "schedule"
+    return view
+
+
 def confirm(action: str, path: str, detail: str) -> bool:
     """Called from the agent thread. Blocks until the UI answers (or times out)."""
     req_id = uuid.uuid4().hex[:8]
@@ -241,6 +267,8 @@ class Session:
         self.sid = 0
         self.lock = threading.Lock()
         self.say_proc: subprocess.Popen | None = None
+        self.greeted = False
+        self.reminder_lines: list[str] = []
 
     def _new_sid(self) -> int:
         with self.lock:
@@ -249,10 +277,18 @@ class Session:
 
     def toggle(self) -> None:
         if hub.state == "idle":
-            sid = self._new_sid()
-            threading.Thread(target=self._voice_loop, args=(sid,), daemon=True).start()
+            self.start_listening()
         else:
             self.stop()
+
+    def start_listening(self, greeting_text: str = "") -> None:
+        """Start the voice loop, optionally greeting the user first."""
+        if hub.state != "idle":
+            return
+        sid = self._new_sid()
+        threading.Thread(
+            target=self._voice_loop, args=(sid, greeting_text), daemon=True
+        ).start()
 
     def stop(self) -> None:
         self._new_sid()                      # invalidates any running loop
@@ -277,15 +313,51 @@ class Session:
 
         threading.Thread(target=work, daemon=True).start()
 
+    def remind(self, item: dict) -> None:
+        """A schedule reminder is due (called from the reminder thread)."""
+        hub.add_log("reminder", "RUN", item["title"], "quiet" if item["quiet"] else "spoken")
+        hub.toast(item["text"])
+        reminders.notify(item["text"])
+        if item["quiet"]:
+            return
+        with self.lock:
+            self.reminder_lines.append(item["text"])
+        if hub.state == "idle":
+            self.say_reminders()             # otherwise the voice loop says it between turns
+
+    def say_reminders(self) -> None:
+        was = hub.state
+        while True:
+            with self.lock:
+                text = self.reminder_lines.pop(0) if self.reminder_lines else ""
+            if not text:
+                break
+            hub.set_state("speaking")
+            hub.emit({"type": "reply", "text": text, "latency_ms": hub.latency_ms})
+            self._speak(text)
+        if hub.state == "speaking":
+            hub.set_state(was if was in ("idle", "listening") else "idle")
+
     def announce(self, text: str) -> None:
         """Speak a short status line (e.g. "Searching for...") mid-turn."""
         hub.set_state("speaking")
         self._speak(text)
         hub.set_state("thinking")
 
-    def _voice_loop(self, sid: int) -> None:
+    def _voice_loop(self, sid: int, greeting_text: str = "") -> None:
         try:
+            if greeting_text:
+                time.sleep(1.5)              # let the wake-up animation play
+                if sid != self.sid:
+                    return
+                hub.set_state("speaking")
+                hub.emit({"type": "reply", "text": greeting_text, "latency_ms": hub.latency_ms})
+                self._speak(greeting_text)
             while sid == self.sid:
+                if self.reminder_lines:
+                    self.say_reminders()
+                    if sid != self.sid:
+                        return
                 hub.set_state("listening")
                 try:
                     text = listen()
@@ -354,6 +426,7 @@ async def lifespan(app: FastAPI):
     set_confirm_handler(confirm)
     Memory.set_event_handler(on_memory_event)
     Agent.set_status_handler(session.announce)
+    reminders.start(deliver=session.remind)
     yield
 
 
@@ -380,6 +453,8 @@ def handle(msg: dict) -> None:
             item[0].set()
     elif kind == "list_memories":
         hub.emit(memory_list())
+    elif kind == "list_schedule":
+        hub.emit(schedule_view(str(msg.get("start", ""))))
     elif kind == "delete_memory":
         # The user clicked delete themselves in the Memory view, so no popup.
         mid = str(msg.get("id", ""))
@@ -399,8 +474,12 @@ async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     hub.clients.add(ws)
     await ws.send_json(hub.snapshot())
+    # First window of this run: greet, then go straight to listening.
+    if AUTO_LISTEN_ON_START and not session.greeted:
+        session.greeted = True
+        session.start_listening(greeting())
     try:
-        while True: 
+        while True:
             try:
                 msg = await ws.receive_json()
             except (ValueError, KeyError):

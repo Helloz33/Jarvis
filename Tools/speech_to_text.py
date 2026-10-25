@@ -3,6 +3,7 @@ from __future__ import annotations
 import speech_recognition as sr
 
 _recognizer = sr.Recognizer()
+_recognizer.pause_threshold = 1.4   # wait through short pauses so a sentence is not cut in half
 
 
 def listen(timeout: int = 5, phrase_time_limit: int = 15) -> str:

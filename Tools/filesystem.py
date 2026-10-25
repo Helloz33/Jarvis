@@ -4,7 +4,12 @@ import difflib
 from pathlib import Path
 
 # Jarvis/Tools/filesystem.py -> parent is Jarvis/Tools -> parent.parent is Jarvis/
-SANDBOX = (Path(__file__).resolve().parent.parent / "Test").resolve()
+ROOT = Path(__file__).resolve().parent.parent
+SANDBOX = (ROOT / "Test").resolve()
+
+# Folders Jarvis may READ (never write) outside Test/. Edits go through the
+# schedule/memory tools, which ask permission and keep the files valid.
+READ_ONLY = {"schedule_data": (ROOT / "Schedule_data").resolve()}
 
 
 # --- Confirmation hook -------------------------------------------------
@@ -79,6 +84,10 @@ def list_files() -> str:
         for path in sorted(SANDBOX.iterdir(), key=lambda p: p.name.lower()):
             kind = "dir" if path.is_dir() else "file"
             items.append(f"{kind}: {path.name}")
+        for name, folder in READ_ONLY.items():
+            if folder.is_dir():
+                for path in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
+                    items.append(f"read-only file: {name}/{path.name}")
         return "\n".join(items) if items else "Test/ is empty."
     except PermissionError:
         return "Error: permission denied."
@@ -87,6 +96,17 @@ def list_files() -> str:
 def read_file(path: str) -> str:
     """Read a UTF-8 text file inside Test/."""
     try:
+        first = Path(str(path).replace("\\", "/")).parts[:1]
+        if first and first[0] in READ_ONLY:
+            base = READ_ONLY[first[0]]
+            target = (ROOT / path).resolve(strict=False)
+            try:
+                target.relative_to(base)
+            except ValueError:
+                return "Error: Path is outside the allowed folders."
+            if not target.is_file():
+                return f"Error: {path} does not exist."
+            return target.read_text(encoding="utf-8")
         target = safe_path(path, must_exist=True)
         if target.is_dir():
             return "Error: that path is a directory."

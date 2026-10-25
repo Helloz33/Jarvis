@@ -9,7 +9,8 @@ PROMPT = (
     "Summarize this conversation between a user and their assistant Jarvis in "
     "at most 2 short sentences, under 250 characters in total. Capture what the user wanted, what was done, "
     "and any lasting facts, preferences or decisions. Write plain notes in the "
-    "third person. Output only the summary."
+    "third person. Do not list individual schedule entries (they live in the schedule itself) "
+    "and only state a change as done if the conversation clearly confirms it. Output only the summary."
 )
 
 

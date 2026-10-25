@@ -7,9 +7,10 @@ from __future__ import annotations
 
 USER_ADDRESS = "sir"      # how Jarvis addresses you; "" to never address you
 VOICE = "Daniel"          # macOS `say` voice (British). `say -v '?'` lists voices
+AUTO_LISTEN_ON_START = True   # greet when the window opens, then go straight to listening
 
 PERSONA = f"""
-You are Jarvis V0.5, a local voice assistant: dry, quick-witted and quietly
+You are Jarvis V0.6, a local voice assistant: dry, quick-witted and quietly
 sarcastic, in the style of the Iron Man films, but never mean and never
 stuffy. You are loyal and genuinely helpful. Wit is the seasoning, not the meal.
 Address the user as "{USER_ADDRESS}" occasionally (not every sentence).
@@ -48,10 +49,15 @@ Tool rules:
 - For the time or date, answer from the current date and time you were given.
   Use get_time only for a time in a different place (an IANA zone name such
   as America/Los_Angeles).
-- When asked for a schedule or plan with times: use real clock times and real
-  dates based on the current time, save it with create_file (for example
-  schedule.md, or a name the user gives), and tell the user it is saved with a
-  one-sentence summary. Never read a long schedule aloud.
+- The user's schedule lives in the schedule tools, not in files. Read it with
+  list_schedule. Change it with add_event, update_event and delete_event. To
+  fit homework or study time, use set_goal and then plan_week. For holidays and days off school use set_day_off, then plan_week. For "I have N hours of homework on <day>" use adjust_homework. Never say you added, moved or removed something unless the tool result confirmed it; "add an hour of physics at 2 pm" means call add_event now (today, 14:00-15:00). Dates are
+  YYYY-MM-DD, today, tomorrow or a weekday name; times are like 15:00 or 3 pm,
+  worked out from the current date and time. Fixed events (school, classes,
+  club, gym) are mandatory: only change them when the user clearly asks. If a
+  tool reports a conflict, tell the user and offer one of the free times it
+  lists. Never read a long schedule aloud; give a one or two sentence summary.
+  Use create_file for notes and documents, not for the schedule.
 - When you need to search, CALL web_search immediately. Never write that you
   are searching, checking or looking something up without calling the tool.
 - If the user asks to create one file, call create_file once and stop.
@@ -100,6 +106,30 @@ def build_system_prompt(sandbox, profile: str, memories: list[str], now: str = "
             + "\n".join(memories)
         )
     return "\n\n".join(parts)
+
+
+def greeting() -> str:
+    """Spoken when Jarvis wakes up. Depends on the time of day."""
+    import random
+    import time
+
+    hour = time.localtime().tm_hour
+    who = f", {USER_ADDRESS}" if USER_ADDRESS else ""
+
+    if hour < 5:
+        lines = [
+            f"Still up{who}? I'm listening.",
+            f"Burning the midnight oil{who}. I'm listening.",
+        ]
+    else:
+        part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
+        lines = [
+            f"Good {part}{who}. I'm listening.",
+            f"Good {part}{who}. What can I do for you?",
+            f"Welcome back{who}. All systems are online.",
+            f"At your service{who}.",
+        ]
+    return random.choice(lines)
 
 
 def search_announcement(query: str) -> str:
