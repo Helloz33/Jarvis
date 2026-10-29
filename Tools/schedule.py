@@ -698,6 +698,128 @@ def plan_week(start_date: str = "") -> str:
     return "\n".join(lines)
 
 
+def _anchor_event(data: dict, day: date, name: str) -> tuple[int, int] | None:
+    """(start, end) in minutes of the event on this day whose title matches name."""
+    name = name.strip().lower()
+    for ev in data["protected"] + data["events"]:
+        title = str(ev.get("title", "")).strip().lower()
+        if title and (name in title or title in name) and _shows(data, ev, day):
+            return _to_min(ev["start"]), _to_min(ev["end"])
+    return None
+
+
+def place_event(
+    title: str = "",
+    minutes: int = 60,
+    count: int = 1,
+    titles: str = "",
+    day: str = "",
+    after: str = "",
+    before: str = "",
+    within: str = "this week",
+) -> str:
+    """Add flexible event(s) and choose the time yourself. Use this when the user does not
+    give a clock time ("add 2 hours of test prep, one for math and one for chem, place it
+    how you see fit"). title + minutes + count makes count sessions of that length; titles
+    ("Math test prep;Chem test prep") makes one session per title. day = a weekday, date, today
+    or tomorrow (default: spread over the rest of this week, falling back to next week).
+    after / before = the name of an event to sit right after or before (e.g. 'club', 'dinner')."""
+    try:
+        data = _load()
+        names = [" ".join(p.split()) for p in re.split(r"[;|,]", str(titles or "")) if p.strip()]
+        if not names:
+            base = " ".join(str(title).split())
+            if not base:
+                return "Error: the event needs a title."
+            try:
+                n = max(1, min(int(count or 1), 14))
+            except (TypeError, ValueError):
+                n = 1
+            names = [base] * n
+        try:
+            length = int(float(minutes or 60))
+        except (TypeError, ValueError):
+            length = 60
+        if not 15 <= length <= 12 * 60:
+            return "Error: a session must be between 15 minutes and 12 hours."
+
+        today = date.today()
+        now = datetime.now()
+        now_min = math.ceil((now.hour * 60 + now.minute) / 15) * 15
+        windows = data["settings"]["study_window"]
+        after, before = str(after or "").strip(), str(before or "").strip()
+
+        if str(day or "").strip():
+            first = _to_date(day)
+            if first < today:
+                return f"Error: {_pretty_day(first)} has already passed."
+            phases = [[first]]
+        else:
+            start = _week_start(today)
+            this_week = [d for d in (start + timedelta(days=i) for i in range(7)) if d >= today]
+            next_start = start + timedelta(days=7)
+            if "next" in str(within).lower():
+                phases = [[next_start + timedelta(days=i) for i in range(7)]]
+            else:
+                phases = [this_week, [next_start + timedelta(days=i) for i in range(7)]]
+
+        used: dict[date, int] = {}
+        placed: list[str] = []
+        seen_anchor = not (after or before)
+
+        def try_day(d: date, name: str) -> tuple[int, int] | None:
+            nonlocal seen_anchor
+            key = "weekend" if (d.weekday() >= 5 or _off(data, d)) else "weekday"
+            lo, hi = (_to_min(x) for x in windows[key])
+            if d == today:
+                lo = max(lo, now_min)
+            if after or before:
+                spot = _anchor_event(data, d, after or before)
+                if not spot:
+                    return None
+                seen_anchor = True
+                if after:
+                    lo = max(spot[1], now_min if d == today else 0)
+                    hi = max(hi, lo + length)
+                else:
+                    hi = min(hi, spot[0]) if spot[0] > lo else spot[0]
+            gaps = [(a, b) for a, b in _free(data, d, lo, hi) if b - a >= length]
+            if not gaps:
+                return None
+            if before and not after:
+                b = gaps[-1][1]
+                return b - length, b                  # right before the anchor
+            a = gaps[0][0]
+            return a, a + length
+
+        with _lock:
+            for name in names:
+                done = None
+                for days in phases:
+                    for d in sorted(days, key=lambda x: (used.get(x, 0), x)):
+                        slot = try_day(d, name)
+                        if slot:
+                            done = (d, slot)
+                            break
+                    if done:
+                        break
+                if not done:
+                    if not seen_anchor:
+                        return f"Error: I could not find '{after or before}' on those days."
+                    hint = _suggest(data, phases[0][0], length) if len(phases) == 1 else ""
+                    return ("Error: " + (f"placed {'; '.join(placed)}, but " if placed else "")
+                            + f"there is no free {length}-minute gap for {name}. {hint}").strip()
+                d, (a, b) = done
+                data["events"].append({"id": _new_id(data), "title": name, "kind": "flexible",
+                                       "date": d.isoformat(), "start": _hhmm(a), "end": _hhmm(b)})
+                used[d] = used.get(d, 0) + 1
+                placed.append(f"{name} on {_pretty_day(d)}, {_fmt(a)}-{_fmt(b)}")
+            _save(data)
+        return "Placed " + "; ".join(placed)
+    except (ValueError, RuntimeError) as exc:
+        return f"Error: {exc}"
+
+
 def adjust_homework(minutes: int, date: str = "today") -> str:
     """Change how much homework there is on ONE day (e.g. 'I have 3 hours of homework on
     Thursday' = 180, 'no homework Friday' = 0). The week is re-planned straight away; homework
@@ -1026,6 +1148,82 @@ def parse_homework_request(text: str) -> tuple[str, int, str] | None:
     if re.search(r"\b(set|make|change|update|usually|every|each|per|default|normally|from now on)\b", t):
         return "default", minutes, ""
     return "day", minutes, "today"
+
+
+_PLACE_HINT = re.compile(
+    r"\b(?:(?:how|wherever|whenever|whatever)(?:\s+(?:you|u))?\s+(?:see\s+fit|works?|fits?|is\s+best)|"
+    r"as\s+you\s+see\s+fit|where(?:ver)?\s+(?:it\s+)?fits?|wherever|whenever|"
+    r"find\s+(?:me\s+)?(?:some\s+|a\s+)?(?:time|spot|slot)|fit\s+(?:it|them|this|that)\s+in|"
+    r"you\s+(?:pick|choose|decide)|(?:the\s+)?best\s+(?:time|spot|slot)|any\s?time|anywhere|"
+    r"place\s+(?:it|them)|slot\s+(?:it|them)\s+in)\b", re.I)
+_ANCHOR = re.compile(r"\b(after|before)\s+(?:my\s+|the\s+|our\s+)?([A-Za-z][A-Za-z'+&-]*)", re.I)
+_ANCHOR_SKIP = {"that", "this", "it", "then", "i", "you", "we", "my", "the", "a", "an", "now", "lunch", "bed"}
+_ONE_FOR = re.compile(
+    r"\b(?:one|1|a\s+(?:session|block|slot))\s+for\s+"
+    r"([A-Za-z][A-Za-z'+&-]*(?:\s+(?!and\b|one\b|a\b|then\b|on\b|this\b|next\b|today\b|tomorrow\b|tonight\b|"
+    r"after\b|before\b|please\b|called\b|at\b)[A-Za-z][A-Za-z'+&-]*)?)", re.I)
+_PLACE_FILL = _FILL | {"session", "sessions", "block", "blocks", "slot", "time", "hour", "hours",
+                       "minutes", "week", "which", "how", "see", "fit", "up", "just", "later"}
+
+
+def parse_place_request(text: str) -> dict | None:
+    """'add 2 hours of test prep, one for math and one for chem, place it how you see fit' or
+    'on Friday add a 1-hour session after my club called physics prep' -> place_event arguments.
+    None when the sentence gives a clock time (parse_add_request handles it) or is not an add."""
+    t = " ".join(text.replace(",", " ").split())
+    if not t or _QUESTION.search(t):
+        return None
+    if not (_INTENT.search(t) or re.search(r"\b(?:find|make|get)\s+(?:me\s+)?(?:some\s+|a\s+)?(?:time|room)\b", t, re.I)):
+        return None
+    if _RANGE.search(t) or _AT.search(t) or re.search(r"\b(homework|hw)\b", t, re.I):
+        return None
+    anchor = next((m for m in _ANCHOR.finditer(t) if m.group(2).lower() not in _ANCHOR_SKIP), None)
+    hint = _PLACE_HINT.search(t)
+    total = _dur_minutes(t)
+    if not (anchor or hint or total):
+        return None
+
+    day = _DAYWORD.search(t)
+    dayword = re.sub(r"^(on|this|next) ", "", day.group(1).lower()).replace("tonight", "today") if day else ""
+    within = "next week" if re.search(r"\bnext\s+week\b", t, re.I) and not day else "this week"
+
+    subjects = [m.group(1).strip() for m in _ONE_FOR.finditer(t)]
+    work = t[:anchor.start()] + " " + t[anchor.end():] if anchor else t
+    for rx in (_PLACE_HINT, _DAYWORD, _ONE_FOR):
+        work = rx.sub(" ", work)
+    work = re.sub(r"\b(?:this|next)\s+week\b|\bfor\s+the\s+week\b", " ", work, flags=re.I)
+
+    called = re.search(r"\b(?:called|named|titled|labell?ed)\s+(.+)$", work, re.I)
+    if called:
+        src = called.group(1)
+    else:
+        verbs = list(_INTENT.finditer(work))
+        src = work[verbs[-1].end():] if verbs else work
+    src = _DUR.sub(" ", src)
+    words = re.findall(r"[A-Za-z][A-Za-z'+&-]*", src)
+    while words and words[0].lower() in _PLACE_FILL:
+        words.pop(0)
+    while words and words[-1].lower() in _PLACE_FILL:
+        words.pop()
+    if len(words) > 6:
+        return None
+    base = " ".join(words)
+
+    count_dur = len(_DUR.findall(t))
+    if len(subjects) >= 2:
+        per = total // len(subjects) if total and count_dur < len(subjects) else (total or 60)
+        names = [f"{s[0].upper()}{s[1:]} {base}".strip() for s in subjects]
+        args = {"titles": ";".join(names), "minutes": per or 60}
+    else:
+        title = base or "Study session"
+        args = {"title": title[0].upper() + title[1:], "minutes": total or 60}
+    if dayword:
+        args["day"] = dayword
+    if anchor:
+        args["after" if anchor.group(1).lower() == "after" else "before"] = anchor.group(2).lower()
+    if within != "this week":
+        args["within"] = within
+    return args
 
 
 def sounds_like_add(text: str) -> bool:

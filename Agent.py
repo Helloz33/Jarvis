@@ -20,7 +20,13 @@ from Personality import (
     build_system_prompt,
     search_announcement,
 )
-from Tools.schedule import find_rename_target, parse_add_request, parse_homework_request, sounds_like_add
+from Tools.schedule import (
+    find_rename_target,
+    parse_add_request,
+    parse_homework_request,
+    parse_place_request,
+    sounds_like_add,
+)
 from Tools import (
     SANDBOX,
     UNTRUSTED_TOOLS,
@@ -37,6 +43,7 @@ from Tools import (
     listen,
     mark_untrusted,
     now_line,
+    place_event,
     plan_week,
     read_file,
     recall,
@@ -275,6 +282,33 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "place_event",
+            "description": (
+                "Add one or more flexible events and let the schedule pick the "
+                "times. Use this whenever the user does NOT give a clock time: "
+                "'add 2 hours of test prep, one for math and one for chem', "
+                "'a 1-hour session after my club', 'find time for a chem quiz "
+                "review'. Use add_event only when they say a time."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "minutes": {"type": "integer", "description": "Length of each session, e.g. 60."},
+                    "count": {"type": "integer", "description": "How many sessions with this title."},
+                    "titles": {"type": "string", "description": "Several different sessions at once, separated by ';', e.g. 'Math test prep;Chem test prep'."},
+                    "day": {"type": "string", "description": "A weekday, YYYY-MM-DD, today or tomorrow. Leave empty to spread over this week."},
+                    "after": {"type": "string", "description": "Name of an event to sit right after, e.g. club."},
+                    "before": {"type": "string", "description": "Name of an event to end right before, e.g. dinner."},
+                    "within": {"type": "string", "enum": ["this week", "next week"]},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "update_event",
             "description": (
                 "Change a scheduled event: move it, rename it or change its "
@@ -458,6 +492,7 @@ FUNCTIONS = {
     "get_time": get_time,
     "list_schedule": list_schedule,
     "add_event": add_event,
+    "place_event": place_event,
     "update_event": update_event,
     "delete_event": delete_event,
     "set_goal": set_goal,
@@ -500,7 +535,7 @@ _PROMISE_RE = re.compile(
 
 
 
-_SCHEDULE_TOOLS = {"add_event", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
+_SCHEDULE_TOOLS = {"add_event", "place_event", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
 
 # The model says it changed the schedule ("I've added...") without calling a tool.
 _CLAIM_RE = re.compile(
@@ -553,6 +588,9 @@ def _calls_from_content(content: str) -> list:
 
 def _quick_schedule(user_text: str) -> str | None:
     """Plain 'add ... at 3 pm' requests are handled directly (see parse_add_request)."""
+    placed = _quick_place(user_text)
+    if placed:
+        return placed
     try:
         previous = next((m["content"] for m in reversed(Memory.history.messages())
                          if m.get("role") == "user"), "")
@@ -575,6 +613,22 @@ def _quick_schedule(user_text: str) -> str | None:
     if result.startswith("Error: that conflicts with " + args["title"]):
         return f"{args['title']} is already on your schedule, sir."
     return "I could not add that. " + result.removeprefix("Error: ")
+
+
+def _quick_place(user_text: str) -> str | None:
+    """'add 2 hours of test prep ... place it how you see fit' -> place_event, handled directly."""
+    try:
+        args = parse_place_request(user_text)
+    except Exception:
+        return None
+    if not args:
+        return None
+    result = FUNCTIONS["place_event"](**args)
+    if not isinstance(result, str):
+        return None
+    if result.startswith("Placed"):
+        return _phrase(result)
+    return "I could not place that. " + result.removeprefix("Error: ")
 
 
 def _quick_homework(user_text: str) -> str | None:
