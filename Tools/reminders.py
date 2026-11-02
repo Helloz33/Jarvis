@@ -60,12 +60,18 @@ def _remember(key: str) -> None:
         pass
 
 
+def _notes():
+    from . import notes
+    return notes
+
+
 def pending(now: datetime | None = None) -> list[dict]:
-    """Reminders that are due and not given yet. Each is marked as given as it is returned."""
+    """Reminders that are due and not given yet. Each is marked as given as it is returned.
+    Both schedule events and the notes in the Reminders tab come through here."""
     out = []
     with _lock:
         sent = _load_sent()
-        for item in _schedule().due_reminders(now):
+        for item in list(_schedule().due_reminders(now)) + list(_notes().due_notes(now)):
             if item["key"] in sent:
                 continue
             _remember(item["key"])

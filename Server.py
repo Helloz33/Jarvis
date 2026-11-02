@@ -23,11 +23,12 @@ from fastapi.responses import FileResponse
 import Agent
 import Memory
 from Personality import AUTO_LISTEN_ON_START, VOICE, greeting
-from Tools import SANDBOX, listen, reminders, set_confirm_handler, speak
+from Tools import SANDBOX, listen, notes_view, reminders, set_confirm_handler, speak
+from Tools import notes as notes_tools
 from Tools.schedule import week_view
 
 PORT = 8765
-ITERATION = "V0.6"
+ITERATION = "V0.6.2"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
 LOG_FILE = ROOT / "logs" / "logbook.jsonl"
@@ -42,7 +43,7 @@ CATEGORY = {
     "edit_file": "FILES", "delete_file": "FILES",
     "run_python": "RUN", "web_search": "WEB", "get_time": "RUN",
     "remember": "MEMORY", "recall": "MEMORY", "forget": "MEMORY",
-    "list_schedule": "RUN", "add_event": "RUN", "update_event": "RUN",
+    "list_schedule": "RUN", "add_event": "RUN", "place_event": "RUN", "clear_day": "RUN", "add_note": "RUN", "list_notes": "RUN", "complete_note": "RUN", "clear_notes": "RUN", "update_event": "RUN",
     "delete_event": "RUN", "set_goal": "RUN", "set_day_off": "RUN", "adjust_homework": "RUN", "plan_week": "RUN",
 }
 
@@ -79,11 +80,19 @@ def describe(name: str, kwargs: dict, result) -> str:
         return str(kwargs.get("query", ""))
     if name == "forget":
         return str(kwargs.get("memory_id", ""))
+    if name == "place_event":
+        return str(kwargs.get("titles") or kwargs.get("title", ""))
+    if name == "add_note":
+        return str(kwargs.get("text", ""))
+    if name == "complete_note":
+        return str(kwargs.get("note", ""))
+    if name in ("list_notes", "clear_notes"):
+        return "reminders"
     if name in ("add_event", "set_goal"):
         return str(kwargs.get("title", ""))
     if name == "adjust_homework":
         return f"{kwargs.get('minutes', '')} min {kwargs.get('date', 'today')}"
-    if name == "set_day_off":
+    if name in ("set_day_off", "clear_day"):
         return str(kwargs.get("start_date", ""))
     if name in ("update_event", "delete_event"):
         return str(kwargs.get("event_id", ""))
@@ -191,7 +200,8 @@ class Hub:
 hub = Hub()
 
 
-SCHEDULE_TOOLS = {"add_event", "update_event", "delete_event", "set_goal", "set_day_off", "adjust_homework", "plan_week"}
+NOTE_TOOLS = {"add_note", "list_notes", "complete_note", "clear_notes"}
+SCHEDULE_TOOLS = {"add_event", "place_event", "clear_day", "update_event", "delete_event", "set_goal", "set_day_off", "adjust_homework", "plan_week"}
 
 
 def instrument_tools() -> None:
@@ -208,6 +218,8 @@ def instrument_tools() -> None:
                         describe(name, kwargs, result), classify(result))
             if name in SCHEDULE_TOOLS:
                 hub.emit(schedule_view())   # keep the SCHEDULE tab live
+            if name in NOTE_TOOLS:
+                hub.emit(notes_view())      # ... and the REMINDERS tab
             return result
         return wrapped
 
@@ -455,6 +467,16 @@ def handle(msg: dict) -> None:
         hub.emit(memory_list())
     elif kind == "list_schedule":
         hub.emit(schedule_view(str(msg.get("start", ""))))
+    elif kind == "list_notes":
+        hub.emit(notes_view())
+    elif kind in ("toggle_note", "delete_note"):
+        # The user clicked it themselves in the Reminders tab, so no popup.
+        nid = str(msg.get("id", ""))
+        if kind == "toggle_note" and notes_tools.toggle_note(nid):
+            hub.add_log("complete_note", "RUN", nid, "ok")
+        elif kind == "delete_note" and notes_tools.delete_note(nid):
+            hub.add_log("complete_note", "RUN", nid, "deleted")
+        hub.emit(notes_view())
     elif kind == "delete_memory":
         # The user clicked delete themselves in the Memory view, so no popup.
         mid = str(msg.get("id", ""))

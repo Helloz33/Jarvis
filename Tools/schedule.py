@@ -88,6 +88,10 @@ _WEEKDAY_NAMES = {
 }
 
 
+_MONTHS = {m: i + 1 for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
+
+
 def _to_date(text, today: date | None = None) -> date:
     today = today or date.today()
     t = str(text).strip().lower()
@@ -106,6 +110,21 @@ def _to_date(text, today: date | None = None) -> date:
         if nxt and delta == 0:
             delta = 7
         return today + timedelta(days=delta)
+    md = re.fullmatch(r"([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?", t)
+    num = re.fullmatch(r"(\d{1,2})/(\d{1,2})", t)
+    month = day_n = None
+    if md and md.group(1)[:3] in _MONTHS:
+        month, day_n = _MONTHS[md.group(1)[:3]], int(md.group(2))
+    elif num:
+        month, day_n = int(num.group(1)), int(num.group(2))
+    if month:
+        try:
+            found = date(today.year, month, day_n)
+        except ValueError:
+            raise ValueError(f"could not read the date '{text}'")
+        if (today - found).days > 30:        # "November 24" said in December means next year
+            found = date(today.year + 1, month, day_n)
+        return found
     raise ValueError(f"could not read the date '{text}'; use YYYY-MM-DD, today, tomorrow or a weekday")
 
 
@@ -518,6 +537,8 @@ def set_goal(title: str, minutes: int, per: str = "week", session_minutes: int =
                     "session_minutes": int(session_minutes) or min(minutes, 60)}
             if old.get("overrides"):
                 goal["overrides"] = old["overrides"]
+            if old.get("skip_dates"):
+                goal["skip_dates"] = old["skip_dates"]
             if old.get("priority") or title.lower() in ("homework", "hw"):
                 goal["priority"] = True          # homework may move other flexible events
             if old.get("buffer_minutes") and not int(buffer_minutes or 0):
@@ -624,7 +645,9 @@ def plan_week(start_date: str = "") -> str:
             session = int(goal.get("session_minutes") or default_session)
             allowed = goal.get("days") or []
             floor = min(30, int(goal["minutes"]))       # ignore leftovers smaller than this
-            days = [d for d in week if d >= today and (not allowed or DAY_CODES[d.weekday()] in allowed)]
+            skipped = set(goal.get("skip_dates", []))
+            days = [d for d in week if d >= today and d.isoformat() not in skipped
+                    and (not allowed or DAY_CODES[d.weekday()] in allowed)]
 
             if goal.get("per") == "day":
                 for day in days:
@@ -820,6 +843,61 @@ def place_event(
         return f"Error: {exc}"
 
 
+def clear_day(start_date: str, end_date: str = "", what: str = "") -> str:
+    """Remove the flexible events (homework, study sessions, test prep...) from a day or a range,
+    and stop plan_week from putting those goals back on those days. what = names to clear, separated
+    by ';' (e.g. 'homework;physics;test prep'); empty = everything flexible. Fixed commitments
+    (school, club, gym) are never touched."""
+    try:
+        data = _load()
+        first = _to_date(start_date)
+        last = _to_date(end_date) if end_date else first
+    except (ValueError, RuntimeError) as exc:
+        return f"Error: {exc}"
+    if last < first:
+        first, last = last, first
+    if (last - first).days > 31:
+        return "Error: I can clear at most 31 days at once."
+    names = [" ".join(n.lower().split()) for n in re.split(r"[;|,]", str(what or "")) if n.strip()]
+    span = _pretty_day(first) + (f" to {_pretty_day(last)}" if last != first else "")
+    days = [first + timedelta(days=i) for i in range((last - first).days + 1)]
+    iso = {d.isoformat() for d in days}
+
+    def wanted(title: str) -> bool:
+        t = title.lower()
+        return not names or any(n in t or t in n for n in names)
+
+    with _lock:
+        hit = [ev for ev in data["events"]
+               if ev.get("kind") != "fixed" and ev.get("date") in iso and not ev.get("days") and wanted(ev["title"])]
+        goals = [g for g in data["goals"] if wanted(g["title"])]
+        if not hit and not goals:
+            return f"There is nothing to clear on {span}."
+        if not names and not ask_permission("clear everything flexible", span,
+                                            f"{len(hit)} events will be removed and goals will skip these days."):
+            return "The user declined this time, so nothing changed. If they ask again, call clear_day again."
+        for ev in hit:
+            data["events"].remove(ev)
+        today = date.today()
+        for g in goals:
+            keep = [d for d in g.get("skip_dates", []) if date.fromisoformat(d) >= today - timedelta(days=7)]
+            g["skip_dates"] = sorted(set(keep) | {d for d in iso if date.fromisoformat(d) >= today})
+        _save(data)
+    titles = []
+    for ev in sorted(hit, key=lambda e: (e["date"], e["start"])):
+        if ev["title"] not in titles:
+            titles.append(ev["title"])
+    removed = f"{len(hit)} session{'s' if len(hit) != 1 else ''} ({', '.join(titles)})" if hit else ""
+    kept = sorted({ev["title"] for d in days for ev in data["events"]
+                   if ev.get("kind") == "fixed" and _shows(data, ev, d)})
+    out = f"Cleared {span}: " + (removed or "no events were placed") + "."
+    if goals:
+        out += " Goals skip these days: " + ", ".join(g["title"] for g in goals) + "."
+    if kept:
+        out += " Left alone: " + ", ".join(kept) + "."
+    return out
+
+
 def adjust_homework(minutes: int, date: str = "today") -> str:
     """Change how much homework there is on ONE day (e.g. 'I have 3 hours of homework on
     Thursday' = 180, 'no homework Friday' = 0). The week is re-planned straight away; homework
@@ -895,19 +973,28 @@ def set_day_off(start_date: str, end_date: str = "", title: str = "No school", r
     span = f"{_pretty_day(first)}" + (f" to {_pretty_day(last)}" if last != first else "")
 
     if remove:
-        keep = [d for d in data["days_off"]
-                if not (d["start"] <= last.isoformat() and first.isoformat() <= d.get("end", d["start"]))]
-        if len(keep) == len(data["days_off"]):
+        keep, touched = [], False
+        for d in data["days_off"]:
+            d_start, d_end = date.fromisoformat(d["start"]), date.fromisoformat(d.get("end", d["start"]))
+            if d_end < first or d_start > last:
+                keep.append(d)
+                continue
+            touched = True                   # trim only the days asked for; keep the rest of the range
+            if d_start < first:
+                keep.append(dict(d, end=(first - timedelta(days=1)).isoformat()))
+            if d_end > last:
+                keep.append(dict(d, start=(last + timedelta(days=1)).isoformat()))
+        if not touched:
             return f"There is no day off on {span}."
         if not ask_permission("remove day off", span, "School will count on these days again."):
-            return "Cancelled by the user. Do not retry."
+            return "The user declined this time, so nothing changed. If they ask again, call set_day_off again."
         with _lock:
             data["days_off"] = keep
             _save(data)
         return f"Removed the day off on {span}. Run plan_week to re-plan."
 
     if not ask_permission("add day off", span, f"{' '.join(str(title).split()) or 'No school'}: school is skipped on these days."):
-        return "Cancelled by the user. Do not retry."
+        return "The user declined this time, so nothing changed. If they ask again, call set_day_off again."
     with _lock:
         data["days_off"].append({"start": first.isoformat(), "end": last.isoformat(),
                                  "title": " ".join(str(title).split()) or "No school"})
@@ -1148,6 +1235,113 @@ def parse_homework_request(text: str) -> tuple[str, int, str] | None:
     if re.search(r"\b(set|make|change|update|usually|every|each|per|default|normally|from now on)\b", t):
         return "default", minutes, ""
     return "day", minutes, "today"
+
+
+_OFF_WORDS = re.compile(
+    r"\b(?:days?\s+off|no\s+school|off\s+(?:from\s+)?school|in[- ]?service|school\s+(?:is\s+)?(?:closed|cancell?ed|off)|"
+    r"(?:school|class(?:es)?)\s+(?:is\s+|are\s+)?(?:out|canceled)|holiday|snow\s+day|teacher\s+work\s+day)\b", re.I)
+_UNDO_WORDS = re.compile(r"\b(undo|remove|cancel\s+(?:the\s+|that\s+)?days?\s+off|never\s*mind|nevermind|is\s+back\s+on|there\s+is\s+school|we\s+have\s+school|"
+                         r"actually\s+(?:there|we)|not\s+(?:a\s+)?(?:day|days)\s+off)\b", re.I)
+_DATEWORD = re.compile(
+    r"\b(today|tonight|tomorrow|(?:(?:this|next)\s+)?(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?s?|"
+    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?|\d{1,2}/\d{1,2})\b", re.I)
+
+
+def _date_ranges(t: str) -> list[tuple[str, str]]:
+    """Every day or range of days named in a sentence: 'today and tomorrow', 'monday through
+    wednesday', 'november 24 to 28' -> [(start, end)] as YYYY-MM-DD, consecutive days merged."""
+    tokens = list(_DATEWORD.finditer(t))
+    if not tokens:
+        return []
+    days: set[date] = set()
+    prev_end = None
+    expand_next = False
+    for i, m in enumerate(tokens):
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        if nxt and re.fullmatch(r"\s*", t[m.end():nxt.start()]) and re.match(r"[A-Za-z]{3,}\.?\s+\d|\d+/", nxt.group(1)):
+            continue                         # "Thursday Nov 26": the date says it all
+        try:
+            d = _to_date(re.sub(r"^(this|next) ", "", m.group(1).lower()).replace("tonight", "today"))
+        except ValueError:
+            continue
+        gap = t[prev_end:m.start()] if prev_end is not None else ""
+        if expand_next and days:
+            last = max(days)
+            if d > last:
+                days.update(last + timedelta(days=i) for i in range(1, (d - last).days + 1))
+        days.add(d)
+        expand_next = bool(re.search(r"\b(through|thru|to|until|till)\b|-", t[m.end():m.end() + 12]))
+        prev_end = m.end()
+    if not days:
+        return []
+    ordered = sorted(days)
+    ranges, start, end = [], ordered[0], ordered[0]
+    for d in ordered[1:]:
+        if (d - end).days == 1:
+            end = d
+        else:
+            ranges.append((start.isoformat(), end.isoformat()))
+            start = end = d
+    ranges.append((start.isoformat(), end.isoformat()))
+    return ranges
+
+
+def parse_day_off_request(text: str) -> dict | None:
+    """'mark today and tomorrow as days off from school' -> {"ranges": [(start, end)], "title": ..,
+    "remove": False}. Dates come back as YYYY-MM-DD. None if it is not about days off."""
+    t = " ".join(text.replace(",", " ").split())
+    if not t or _QUESTION.search(t) or not _OFF_WORDS.search(t):
+        return None
+    ranges = _date_ranges(t)
+    if not ranges:
+        return None
+    low = t.lower()
+    title = "In-service day" if re.search(r"in[- ]?service", low) else \
+            "Snow day" if "snow" in low else "Holiday" if "holiday" in low else "No school"
+    return {"ranges": ranges, "title": title, "remove": bool(_UNDO_WORDS.search(t))}
+
+
+_CLEAR_VERB = re.compile(r"\b(remove|clear|delete|wipe|empty|get\s+rid\s+of|take\s+off|take\s+out|cancel|drop)\b", re.I)
+_CLEAR_ALL = re.compile(r"\b(all|everything|every\s+thing|whole|entire)\b", re.I)
+_CLEAR_FILL = _FILL | {"remove", "clear", "delete", "wipe", "empty", "cancel", "drop", "get", "rid", "take", "off", "out",
+                       "all", "everything", "items", "item", "events", "event", "stuff", "things", "thing", "sessions",
+                       "session", "schedule", "schedules", "plans", "plan", "tasks", "task", "activities", "can", "thank",
+                       "but", "just", "only", "both", "those", "these", "their", "its", "up", "from", "off"}
+
+
+def parse_clear_request(text: str) -> dict | None:
+    """'remove all items on the Monday schedule' / 'remove the homework and physics stuff and test
+    prep on Monday and Tuesday' -> {"ranges": [...], "what": "homework;physics;test prep"} (what ''
+    = everything flexible). None when it is not a clear-the-day request or names no day."""
+    t = " ".join(text.replace(",", " ").split())
+    if not t or _QUESTION.search(t) or not _CLEAR_VERB.search(t) or _OFF_WORDS.search(t):
+        return None
+    ranges = _date_ranges(t)
+    if not ranges:
+        return None
+    verb = list(_CLEAR_VERB.finditer(t))[-1]
+    body = t[verb.end():]
+    names_src = _DATEWORD.sub(" ", body)
+    names_src = re.sub(r"\b(?:on|for|from|during|in)\s+(?:the\s+)?(?:mondays?|tuesdays?|schedule)\b", " ", names_src, flags=re.I)
+    parts = [p for p in re.split(r"\b(?:and|plus|then|as well as)\b", names_src, flags=re.I)]
+    names = []
+    for part in parts:
+        words = re.findall(r"[A-Za-z][A-Za-z'+&-]*", part)
+        words = [w for w in words if w.lower() not in _CLEAR_FILL]
+        if words:
+            names.append(" ".join(words).lower())
+    if _CLEAR_ALL.search(body) and not names:
+        names = []
+    return {"ranges": ranges, "what": ";".join(names)}
+
+
+_CONFIRM = re.compile(r"^\s*(?:(?:ok|okay|yes|yeah|yep|sure|please|jarvis|selene|just)[ ,]+)*"
+                      r"(do it|go ahead|go for it|do that|yes|yeah|yep|sure|confirm(?:ed)?|approve|make it so|try again|again)(?:\s+please)?\W*$", re.I)
+
+
+def is_confirmation(text: str) -> bool:
+    """A bare 'do it' / 'yes' / 'go ahead': the user is answering the last thing they asked."""
+    return bool(_CONFIRM.match(text or ""))
 
 
 _PLACE_HINT = re.compile(

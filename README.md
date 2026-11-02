@@ -1,6 +1,6 @@
-# Jarvis V0.6
+# Jarvis V0.6.2
 
-A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, a schedule you can talk to (with spoken reminders), a "Jarvis wake up" wake word, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
+A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, a schedule you can talk to (with spoken reminders and a Reminders tab for "don't forget" notes), a "Jarvis wake up" wake word, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
 
 ## Project layout
 
@@ -25,7 +25,8 @@ Jarvis/
 │   ├── profile.md
 │   └── memories.jsonl
 ├── Schedule_data/           <- your personal schedule (created automatically, never committed)
-│   └── schedule.json
+│   ├── schedule.json
+│   └── notes.json           <- your reminder notes
 ├── ui/
 │   └── index.html           <- the whole UI in one file (works offline)
 ├── logs/
@@ -36,6 +37,7 @@ Jarvis/
 │   ├── memory_tools.py      <- remember / recall / forget
 │   ├── clock.py             <- current date/time, and times in other time zones
 │   ├── schedule.py          <- the schedule: events, goals, homework, days off, week planner
+│   ├── notes.py             <- the Reminders tab: "don't forget" notes (Schedule_data/notes.json)
 │   ├── reminders.py         <- spoken and silent reminders ("Sir, we have ... scheduled for ...")
 │   ├── python_runner.py
 │   ├── web_search.py
@@ -56,6 +58,7 @@ Everything from V0.5 (memory, personality, clock, search), plus:
 - **Mandatory commitments are protected.** Classes, club and similar fixed events (and protected time such as sleep and dinner) can't be double-booked, and changing a fixed event asks permission first.
 - **Goals and a week planner.** "Plan my week" fits goals (study, test prep) into free time. Homework has priority and starts a set time after your last commitment: "I have 3 hours of homework on Thursday" re-plans the week, moving other flexible events to another day by itself.
 - **Days off.** "No school Thursday": school, club and gym are skipped that day.
+- **A Reminders tab.** "Remind me to bring my charger tomorrow", "remind me at 7 PM to call dad", "don't let me forget the permission slip". Tick notes off by clicking or by voice ("cross off the charger"); "what do I need to remember?" reads them out. A note with a time is announced then, like any reminder (and respects quiet hours).
 - **Reminders.** 15 minutes before an event, spoken and as a macOS notification, with quiet hours that hold spoken reminders back. They also work with the window closed (see below).
 
 Earlier versions:
@@ -233,6 +236,14 @@ New in V0.5:
 - `Agent.py`: MODEL, MAX_TOOL_CALLS, PERSONA_ON_WRITES (set False for speed)
 - `Llm.py`: THINK (True lets reasoning models think before answering)
 
+## What's new in V0.6.2
+
+- **REMINDERS tab and voice notes:** "remind me to ...", "don't let me forget ...", "cross off ...", "what do I need to remember?". Timed notes are announced when due (quiet hours respected). Notes live in `Schedule_data/notes.json`.
+- **Place it for me:** "add 2 hours of test prep, one for math and one for chem, place it how you see fit" or "add a 1-hour session after my club called physics prep". Jarvis picks free times (`place_event`).
+- **Clear a day:** "remove the homework and physics stuff and test prep on Monday and Tuesday" or "remove everything on Monday". Those goals stay off those days when the week is re-planned (`clear_day`).
+- **Days off by voice, and a declined popup is no longer final:** "mark today and tomorrow as days off" works directly, and saying "do it" after pressing Deny asks again. Undoing one day of a range keeps the rest.
+- Fix: the SCHEDULE tab icon was missing; the tab row now wraps on narrow windows.
+
 ## What's new in V0.6
 
 - Wake word ("Jarvis wake up") with an always-on script, and a sphere wake-up animation
@@ -272,10 +283,10 @@ Check `git status` before every commit: `.env`, `logs/`, `memory_data/`, `Schedu
 
 ```bash
 git add .
-git commit -m "V0.6: wake word, schedule, reminders"
+git commit -m "V0.6.2: Reminders tab, place_event, clear_day, day-off fixes"
 git push
-git tag -a v0.6 -m "Jarvis V0.6 - wake word, schedule, reminders"
-git push origin v0.6
+git tag -a v0.6.2 -m "Jarvis V0.6.2 - Reminders tab, smarter scheduling"
+git push origin v0.6.2
 ```
 
-**Current version:** V0.6, wake word, schedule and reminders
+**Current version:** V0.6.2, Reminders tab and smarter scheduling

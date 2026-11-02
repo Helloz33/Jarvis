@@ -7,6 +7,7 @@ from .clock import get_time, now_line
 from .schedule import (
     add_event,
     adjust_homework,
+    clear_day,
     delete_event,
     list_schedule,
     place_event,
@@ -17,6 +18,8 @@ from .schedule import (
 )
 
 from . import reminders
+
+from .notes import add_note, clear_notes, complete_note, list_notes, notes_view
 
 from .speech_to_text import listen
 
@@ -62,7 +65,13 @@ __all__ = [
     "set_goal",
     "set_day_off",
     "reminders",
+    "add_note",
+    "list_notes",
+    "complete_note",
+    "clear_notes",
+    "notes_view",
     "adjust_homework",
+    "clear_day",
     "place_event",
     "plan_week",
     "listen",

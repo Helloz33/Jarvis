@@ -20,9 +20,13 @@ from Personality import (
     build_system_prompt,
     search_announcement,
 )
+from Tools.notes import parse_note_request
 from Tools.schedule import (
     find_rename_target,
+    is_confirmation,
     parse_add_request,
+    parse_clear_request,
+    parse_day_off_request,
     parse_homework_request,
     parse_place_request,
     sounds_like_add,
@@ -31,7 +35,11 @@ from Tools import (
     SANDBOX,
     UNTRUSTED_TOOLS,
     add_event,
+    add_note,
     adjust_homework,
+    clear_day,
+    clear_notes,
+    complete_note,
     create_file,
     delete_event,
     delete_file,
@@ -39,6 +47,7 @@ from Tools import (
     forget,
     get_time,
     list_files,
+    list_notes,
     list_schedule,
     listen,
     mark_untrusted,
@@ -309,6 +318,76 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "clear_day",
+            "description": (
+                "Empty a day or several days: remove the flexible sessions "
+                "(homework, physics, test prep...) there and stop the planner "
+                "putting those goals back on those days. what = names separated "
+                "by ';' or empty for everything flexible. School, club and gym "
+                "are never touched. Use this for 'remove everything on Monday'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday."},
+                    "end_date": {"type": "string", "description": "Last day, if more than one."},
+                    "what": {"type": "string", "description": "e.g. 'homework;physics'. Empty = everything flexible."},
+                },
+                "required": ["start_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_note",
+            "description": (
+                "Save a reminder note for the REMINDERS tab: 'remind me to bring "
+                "my charger tomorrow', 'don't let me forget the permission slip'. "
+                "date and time are optional; with a time the user is alerted then."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "What to remember, e.g. bring my charger."},
+                    "date": {"type": "string", "description": "today, tomorrow, a weekday or YYYY-MM-DD. Optional."},
+                    "time": {"type": "string", "description": "e.g. 7 pm. Optional."},
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_notes",
+            "description": "Read the user's open reminder notes (the REMINDERS tab).",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "complete_note",
+            "description": "Cross a reminder note off (or remove it with remove=true). note = its id or a few of its words.",
+            "parameters": {
+                "type": "object",
+                "properties": {"note": {"type": "string"}, "remove": {"type": "boolean"}},
+                "required": ["note"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "clear_notes",
+            "description": "Remove crossed-off reminder notes (done_only=true, default) or every note (done_only=false, asks first).",
+            "parameters": {"type": "object", "properties": {"done_only": {"type": "boolean"}}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "update_event",
             "description": (
                 "Change a scheduled event: move it, rename it or change its "
@@ -493,6 +572,11 @@ FUNCTIONS = {
     "list_schedule": list_schedule,
     "add_event": add_event,
     "place_event": place_event,
+    "clear_day": clear_day,
+    "add_note": add_note,
+    "list_notes": list_notes,
+    "complete_note": complete_note,
+    "clear_notes": clear_notes,
     "update_event": update_event,
     "delete_event": delete_event,
     "set_goal": set_goal,
@@ -535,7 +619,7 @@ _PROMISE_RE = re.compile(
 
 
 
-_SCHEDULE_TOOLS = {"add_event", "place_event", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
+_SCHEDULE_TOOLS = {"add_event", "place_event", "clear_day", "add_note", "complete_note", "clear_notes", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
 
 # The model says it changed the schedule ("I've added...") without calling a tool.
 _CLAIM_RE = re.compile(
@@ -588,12 +672,24 @@ def _calls_from_content(content: str) -> list:
 
 def _quick_schedule(user_text: str) -> str | None:
     """Plain 'add ... at 3 pm' requests are handled directly (see parse_add_request)."""
+    try:
+        previous = next((m["content"] for m in reversed(Memory.history.messages())
+                         if m.get("role") == "user"), "")
+    except Exception:
+        previous = ""
+    noted = _quick_notes(user_text)
+    if noted:
+        return noted
+    off = _quick_dayoff(user_text, previous)
+    if off:
+        return off
+    cleared = _quick_clear(user_text)
+    if cleared:
+        return cleared
     placed = _quick_place(user_text)
     if placed:
         return placed
     try:
-        previous = next((m["content"] for m in reversed(Memory.history.messages())
-                         if m.get("role") == "user"), "")
         args = parse_add_request(user_text, previous)
     except Exception:
         return None
@@ -613,6 +709,93 @@ def _quick_schedule(user_text: str) -> str | None:
     if result.startswith("Error: that conflicts with " + args["title"]):
         return f"{args['title']} is already on your schedule, sir."
     return "I could not add that. " + result.removeprefix("Error: ")
+
+
+def _quick_notes(user_text: str) -> str | None:
+    """'remind me to bring my charger tomorrow', 'cross off the charger', 'what do I need to
+    remember?' -> the Reminders tab, handled directly."""
+    try:
+        parsed = parse_note_request(user_text)
+    except Exception:
+        return None
+    if not parsed:
+        return None
+    action = parsed["action"]
+    if action == "add":
+        result = FUNCTIONS["add_note"](text=parsed["text"], date=parsed["date"], time=parsed["time"])
+    elif action == "done":
+        result = FUNCTIONS["complete_note"](note=parsed["note"])
+    elif action == "delete":
+        result = FUNCTIONS["complete_note"](note=parsed["note"], remove=True)
+    elif action == "clear":
+        result = FUNCTIONS["clear_notes"](done_only=parsed["done_only"])
+    else:
+        result = FUNCTIONS["list_notes"]()
+    result = str(result)
+    if result.startswith("Error:"):
+        return "I could not do that. " + result.removeprefix("Error: ")
+    if action == "list":
+        return _speak_list(result)
+    return result
+
+
+def _speak_list(result: str) -> str:
+    """Drop the [ids] from a list_notes line so it reads well aloud."""
+    return re.sub(r"\s*\[[0-9a-f]{4}\]", "", result)
+
+
+def _quick_clear(user_text: str) -> str | None:
+    """'remove all items on the Monday schedule' -> clear_day, handled directly."""
+    try:
+        parsed = parse_clear_request(user_text)
+    except Exception:
+        return None
+    if not parsed:
+        return None
+    done, declined, failed = [], False, []
+    for start, end in parsed["ranges"]:
+        result = str(FUNCTIONS["clear_day"](start_date=start, end_date=end, what=parsed["what"]))
+        if result.startswith("Cleared"):
+            done.append(result)
+        elif result.startswith("There is nothing"):
+            done.append(result)
+        elif "declined" in result:
+            declined = True
+        else:
+            failed.append(result.removeprefix("Error: "))
+    if done:
+        return " ".join(done)
+    if declined:
+        return "Okay, I left your schedule as it was. Say \"do it\" if you want me to ask again."
+    return "I could not clear that. " + " ".join(failed)
+
+
+def _quick_dayoff(user_text: str, previous: str = "") -> str | None:
+    """'mark today and tomorrow as days off from school' (or a bare 'do it' after a declined
+    one) -> set_day_off, handled directly. A declined prompt is never permanent."""
+    try:
+        parsed = parse_day_off_request(previous if is_confirmation(user_text) else user_text)
+    except Exception:
+        return None
+    if not parsed:
+        return None
+    done, declined, failed = [], False, []
+    for start, end in parsed["ranges"]:
+        result = FUNCTIONS["set_day_off"](start_date=start, end_date=end, title=parsed["title"],
+                                          remove=parsed["remove"])
+        result = str(result)
+        if result.startswith(("Marked", "Removed")):
+            done.append(result.split(" Run plan_week")[0].rstrip("."))
+        elif "declined" in result:
+            declined = True
+        else:
+            failed.append(result.removeprefix("Error: "))
+    if done:
+        FUNCTIONS["plan_week"]()
+        return "; ".join(done) + ". I re-planned the week."
+    if declined:
+        return "Okay, I left your schedule as it was. Say \"do it\" if you want me to ask again."
+    return "I could not change the days off. " + " ".join(failed)
 
 
 def _quick_place(user_text: str) -> str | None:
