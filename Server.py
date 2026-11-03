@@ -25,10 +25,11 @@ import Memory
 from Personality import AUTO_LISTEN_ON_START, VOICE, greeting
 from Tools import SANDBOX, listen, notes_view, reminders, set_confirm_handler, speak
 from Tools import notes as notes_tools
+from Tools import system
 from Tools.schedule import week_view
 
 PORT = 8765
-ITERATION = "V0.6.2"
+ITERATION = "V0.7"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
 LOG_FILE = ROOT / "logs" / "logbook.jsonl"
@@ -412,14 +413,9 @@ class Session:
 
     def _speak(self, text: str) -> None:
         text = text[:1200]
-        if sys.platform == "darwin":
-            # `say` is reliable off the main thread and can be interrupted.
-            self.say_proc = subprocess.Popen(["say", "-v", VOICE, text])
-            if self.say_proc.wait() > 0:
-                # Voice not installed on this Mac: use the system default.
-                self.say_proc = subprocess.Popen(["say", text])
-                self.say_proc.wait()
-        else:
+        # The system layer talks through the OS voice (interruptible); pyttsx3 is the last resort.
+        spoken = system.speak(text, VOICE, on_start=lambda p: setattr(self, "say_proc", p))
+        if not spoken:
             speak(text)
 
     def _kill_speech(self) -> None:

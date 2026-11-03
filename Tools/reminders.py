@@ -13,12 +13,12 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
 import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from . import system
 
 ROOT = Path(__file__).resolve().parent.parent      # the Jarvis folder
 SENT_FILE = ROOT / "Schedule_data" / "reminders_sent.json"
@@ -80,32 +80,17 @@ def pending(now: datetime | None = None) -> list[dict]:
 
 
 def notify(text: str) -> None:
-    """A silent macOS notification (no-op on other systems)."""
-    if sys.platform != "darwin":
-        return
-    script = 'on run argv\ndisplay notification (item 1 of argv) with title "Jarvis"\nend run'
-    try:
-        subprocess.run(["osascript", "-e", script, text], timeout=10, capture_output=True)
-    except (OSError, subprocess.SubprocessError):
-        pass
+    """A silent desktop notification (macOS, Windows, Linux: see Tools/system.py)."""
+    system.notify(text, "Jarvis")
 
 
 def say(text: str) -> None:
-    if sys.platform != "darwin":
-        return
-    try:
-        if subprocess.run(["say", "-v", _voice(), text], timeout=60).returncode != 0:
-            subprocess.run(["say", text], timeout=60)
-    except (OSError, subprocess.SubprocessError):
-        pass
+    system.speak(text, _voice())
 
 
 def app_running() -> bool:
     """Is the Jarvis app (App.py) running right now?"""
-    try:
-        return subprocess.run(["pgrep", "-f", "App.py"], capture_output=True, timeout=5).returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
+    return system.app_running("App.py")
 
 
 def _standalone_deliver(item: dict) -> None:

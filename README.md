@@ -1,4 +1,4 @@
-# Jarvis V0.6.2
+# Jarvis V0.7
 
 A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, a schedule you can talk to (with spoken reminders and a Reminders tab for "don't forget" notes), a "Jarvis wake up" wake word, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
 
@@ -39,6 +39,7 @@ Jarvis/
 │   ├── schedule.py          <- the schedule: events, goals, homework, days off, week planner
 │   ├── notes.py             <- the Reminders tab: "don't forget" notes (Schedule_data/notes.json)
 │   ├── reminders.py         <- spoken and silent reminders ("Sir, we have ... scheduled for ...")
+│   ├── system.py            <- everything that differs per operating system (voice, notifications, app check)
 │   ├── python_runner.py
 │   ├── web_search.py
 │   ├── speech_to_text.py
@@ -236,6 +237,11 @@ New in V0.5:
 - `Agent.py`: MODEL, MAX_TOOL_CALLS, PERSONA_ON_WRITES (set False for speed)
 - `Llm.py`: THINK (True lets reasoning models think before answering)
 
+## What's new in V0.7
+
+- **Platform layer (`Tools/system.py`):** the macOS-only code (the `say` voice, notifications, the "is the app running?" check) now lives in one file. Windows and Linux versions are written, but they have **not been tested on a real machine yet**, so treat them as experimental. macOS behaves exactly as before.
+- Nothing else changes for you. This release is groundwork for the later installer and a possible cloud/phone version.
+
 ## What's new in V0.6.2
 
 - **REMINDERS tab and voice notes:** "remind me to ...", "don't let me forget ...", "cross off ...", "what do I need to remember?". Timed notes are announced when due (quiet hours respected). Notes live in `Schedule_data/notes.json`.
@@ -276,6 +282,7 @@ New in V0.5:
 - The SCHEDULE tab is view-only; change things by talking to Jarvis or editing `schedule.json`.
 - Speech recognition (Google) sometimes mishears times; say "from 6:10 to 6:40 PM" in one go.
 - The CALL button is still a placeholder.
+- Windows and Linux support (`Tools/system.py`) is untested; macOS is the supported platform.
 
 ## Development notes
 
@@ -283,10 +290,10 @@ Check `git status` before every commit: `.env`, `logs/`, `memory_data/`, `Schedu
 
 ```bash
 git add .
-git commit -m "V0.6.2: Reminders tab, place_event, clear_day, day-off fixes"
+git commit -m "V0.7: platform layer"
 git push
-git tag -a v0.6.2 -m "Jarvis V0.6.2 - Reminders tab, smarter scheduling"
-git push origin v0.6.2
+git tag -a v0.7 -m "Jarvis V0.7 - platform layer"
+git push origin v0.7
 ```
 
-**Current version:** V0.6.2, Reminders tab and smarter scheduling
+**Current version:** V0.7, platform layer
