@@ -26,14 +26,18 @@ from Personality import AUTO_LISTEN_ON_START, VOICE, greeting
 from Tools import SANDBOX, listen, notes_view, reminders, set_confirm_handler, speak
 from Tools import notes as notes_tools
 from Tools import system
+from Tools import timers
 from Tools.schedule import week_view
 
 PORT = 8765
-ITERATION = "V0.7"
+ITERATION = "V0.8"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
 LOG_FILE = ROOT / "logs" / "logbook.jsonl"
 EXIT_WORDS = {"exit", "quit", "bye"}
+# The conversation is saved to long-term memory however it ends (see Memory.end_session):
+STANDBY_SAVE_SECONDS = 90   # in STANDBY (STOP, tapping the core, SHUT DOWN, after a typed turn) for this long: save
+IDLE_SAVE_MINUTES = 10      # still listening but nothing said for this long: save
 CONFIRM_TIMEOUT_SECONDS = 120
 # Only pages served by this app may open the WebSocket (stops other websites
 # open in your browser from talking to Jarvis).
@@ -44,7 +48,7 @@ CATEGORY = {
     "edit_file": "FILES", "delete_file": "FILES",
     "run_python": "RUN", "web_search": "WEB", "get_time": "RUN",
     "remember": "MEMORY", "recall": "MEMORY", "forget": "MEMORY",
-    "list_schedule": "RUN", "add_event": "RUN", "place_event": "RUN", "clear_day": "RUN", "add_note": "RUN", "list_notes": "RUN", "complete_note": "RUN", "clear_notes": "RUN", "update_event": "RUN",
+    "list_schedule": "RUN", "add_event": "RUN", "place_event": "RUN", "clear_day": "RUN", "add_note": "RUN", "set_timer": "RUN", "cancel_timer": "RUN", "list_timers": "RUN", "list_notes": "RUN", "complete_note": "RUN", "clear_notes": "RUN", "update_event": "RUN",
     "delete_event": "RUN", "set_goal": "RUN", "set_day_off": "RUN", "adjust_homework": "RUN", "plan_week": "RUN",
 }
 
@@ -85,6 +89,11 @@ def describe(name: str, kwargs: dict, result) -> str:
         return str(kwargs.get("titles") or kwargs.get("title", ""))
     if name == "add_note":
         return str(kwargs.get("text", ""))
+    if name == "set_timer":
+        mins = kwargs.get("minutes", 0) or 0
+        return f"{kwargs.get('label') or 'timer'} ({mins:g} min)" if isinstance(mins, (int, float)) else str(kwargs.get("label", "timer"))
+    if name in ("cancel_timer", "list_timers"):
+        return str(kwargs.get("timer", "")) or "timers"
     if name == "complete_note":
         return str(kwargs.get("note", ""))
     if name in ("list_notes", "clear_notes"):
@@ -113,6 +122,7 @@ class Hub:
         self.clients: set[WebSocket] = set()
         self.started = time.time()
         self.state = "idle"
+        self.idle_since = time.time()     # when STANDBY began (used to save the conversation)
         self.latency_ms: int | None = None
         self.counts = {"FILES": 0, "RUN": 0, "WEB": 0, "MEMORY": 0, "VOICE": 0}
         self.logs: list[dict] = []
@@ -171,6 +181,8 @@ class Hub:
                 self.clients.discard(ws)
 
     def set_state(self, state: str) -> None:
+        if state == "idle" and self.state != "idle":
+            self.idle_since = time.time()
         self.state = state
         self.emit({"type": "state", "state": state})
 
@@ -234,6 +246,7 @@ def on_memory_event(kind: str, detail: str) -> None:
         "auto_recall": ("memory_recall", "ok"),
         "summary": ("session_summary", "approved"),
         "summary_error": ("session_summary", "error"),
+        "recover": ("session_summary", "ok"),
     }
     tool, result = names.get(kind, (kind, "ok"))
     hub.add_log(tool, "MEMORY", detail, result)
@@ -311,6 +324,40 @@ class Session:
             event.set()
         hub.set_state("idle")
 
+    def save_memory(self, reason: str, wait: bool = False) -> bool:
+        """End the conversation and summarize it into long-term memory."""
+        if not len(Memory.history):
+            return False
+        started = Memory.end_session(Agent.MODEL, on_done=lambda: hub.emit(memory_list()), wait=wait, timeout=25)
+        if started:
+            hub.add_log("end_session", "MEMORY", f"conversation saved ({reason})", "ok")
+        return started
+
+    def watch_session(self) -> None:
+        """Background check: save the conversation after STOP or when it has gone quiet."""
+        while True:
+            time.sleep(15)
+            try:
+                self.check_session()
+            except Exception:
+                pass
+
+    def check_session(self, now: float | None = None) -> str:
+        """Save the conversation once Jarvis has been in STANDBY for 90 seconds (however it got
+        there: STOP, tapping the core, SHUT DOWN, the end of a typed turn), or after 10 minutes
+        of listening with nothing said."""
+        if not len(Memory.history):
+            return ""
+        now = now or time.time()
+        if hub.state == "idle":
+            if now - max(hub.idle_since, Memory.history.last) >= STANDBY_SAVE_SECONDS:
+                self.save_memory("standby")
+                return "standby"
+        elif hub.state == "listening" and now - Memory.history.last >= IDLE_SAVE_MINUTES * 60:
+            self.save_memory("idle")
+            return "idle"
+        return ""
+
     def say(self, text: str) -> None:
         """Typed fallback (open the UI with #dev) for testing without a mic."""
         text = text.strip()
@@ -337,6 +384,16 @@ class Session:
             self.reminder_lines.append(item["text"])
         if hub.state == "idle":
             self.say_reminders()             # otherwise the voice loop says it between turns
+
+    def timer_done(self, text: str) -> None:
+        """A timer ended (called from its timer thread). Timers always speak, even in quiet hours."""
+        hub.add_log("timer", "RUN", text, "done")
+        hub.toast(text)
+        reminders.notify(text)
+        with self.lock:
+            self.reminder_lines.append(text)
+        if hub.state == "idle":
+            self.say_reminders()
 
     def say_reminders(self) -> None:
         was = hub.state
@@ -385,7 +442,7 @@ class Session:
                 hub.emit({"type": "heard", "text": text})
                 if text.strip().lower().strip(".!?, ") in EXIT_WORDS:
                     # Summarize while "Goodbye" is being spoken.
-                    Memory.end_session(Agent.MODEL, on_done=lambda: hub.emit(memory_list()))
+                    self.save_memory("said goodbye")
                     self._speak("Goodbye.")
                     break
                 if not self._turn(text, sid):
@@ -435,7 +492,13 @@ async def lifespan(app: FastAPI):
     Memory.set_event_handler(on_memory_event)
     Agent.set_status_handler(session.announce)
     reminders.start(deliver=session.remind)
+    timers.start(deliver=session.timer_done)
+    # A conversation the app never got to save (crash, force quit, closed window) is saved now.
+    threading.Thread(target=lambda: Memory.recover_session(Agent.MODEL, on_done=lambda: hub.emit(memory_list())),
+                     daemon=True).start()
+    threading.Thread(target=session.watch_session, daemon=True, name="session-watch").start()
     yield
+    session.save_memory("app closed", wait=True)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -481,7 +544,14 @@ def handle(msg: dict) -> None:
         hub.emit(memory_list())
     elif kind == "quit":
         session.stop()
-        threading.Timer(0.3, lambda: os._exit(0)).start()
+
+        def finish():
+            if len(Memory.history):
+                hub.toast("Saving this conversation to memory...")
+                session.save_memory("app closed", wait=True)   # anything unfinished is redone next start
+            os._exit(0)
+
+        threading.Thread(target=finish, daemon=True).start()
 
 
 @app.websocket("/ws")

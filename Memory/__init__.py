@@ -8,6 +8,8 @@ Layers:
 """
 from __future__ import annotations
 
+import json
+import os
 import threading
 import time
 
@@ -82,33 +84,126 @@ def _trim(text: str, limit: int = 270) -> str:
     return cut[: end + 1] if end > 40 else cut.rsplit(" ", 1)[0] + "..."
 
 
-def end_session(model: str, on_done=None) -> bool:
-    """Summarize the finished conversation in the background and clear history.
+# The session lives on disk while it is going on, so nothing is lost however it ends:
+#   memory_data/session_current.json   the conversation in progress (rewritten every turn)
+#   memory_data/sessions_pending/      finished sessions waiting for their summary
+# A pending file is deleted only after its summary is saved, so a summary that fails
+# (Ollama not running, the app closed half-way) is simply tried again next time.
+_summary_lock = threading.Lock()
 
-    Returns True if a summary job was started.
-    """
-    turns = history.snapshot()
-    history.clear()
-    if len(turns) < MIN_TURNS:
+
+def _session_file():
+    return store.DATA_DIR / "session_current.json"
+
+
+def _pending_dir():
+    return store.DATA_DIR / "sessions_pending"
+
+
+def _write_json(path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    os.replace(tmp, path)          # all or nothing: a crash never leaves half a file
+
+
+def _persist(data) -> None:
+    path = _session_file()
+    if data is None:
+        path.unlink(missing_ok=True)
+    else:
+        _write_json(path, data)
+
+
+history.on_change = _persist
+
+
+def _queue(data) -> bool:
+    """Put a finished session in the pending folder. Returns False if it is too short to keep."""
+    if not data or len(data.get("turns", [])) < MIN_TURNS:
         return False
+    started = data.get("started") or time.time()
+    _write_json(_pending_dir() / f"{int(started * 1000)}.json", data)
+    return True
 
+
+def _summarize_pending(model: str) -> int:
+    """Summarize every pending session, oldest first. Returns how many were saved."""
+    saved = 0
+    with _summary_lock:
+        folder = _pending_dir()
+        while True:
+            files = sorted(folder.glob("*.json")) if folder.exists() else []
+            if not files:
+                break
+            path = files[0]
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                turns = [tuple(t) for t in data.get("turns", [])]
+            except (OSError, ValueError):
+                path.unlink(missing_ok=True)       # unreadable: drop it rather than retry forever
+                continue
+            if len(turns) < MIN_TURNS:
+                path.unlink(missing_ok=True)
+                continue
+            text = _trim(summarize(turns, model))   # raises if Ollama is down: the file stays
+            day = time.strftime("%Y-%m-%d", time.localtime(data.get("started") or time.time()))
+            if text:
+                entry = store.add_memory(f"Session {day}: {text}", "session_summary", embeddings.embed(text))
+                _event("summary", entry["text"] if entry else "duplicate, skipped")
+            path.unlink(missing_ok=True)
+            saved += 1
+    return saved
+
+
+def _run_summaries(model: str, on_done=None, wait: bool = False, timeout: float = 60) -> None:
     def work() -> None:
         try:
-            text = _trim(summarize(turns, model))
-            if text:
-                entry = store.add_memory(
-                    f"Session {time.strftime('%Y-%m-%d')}: {text}",
-                    "session_summary",
-                    embeddings.embed(text),
-                )
-                _event("summary", entry["text"] if entry else "duplicate, skipped")
+            _summarize_pending(model)
         except Exception as exc:
-            _event("summary_error", str(exc))
+            _event("summary_error", f"{exc} (kept, will retry next start)")
         finally:
             if on_done:
                 on_done()
 
-    threading.Thread(target=work, daemon=True).start()
+    thread = threading.Thread(target=work, daemon=True, name="session-summary")
+    thread.start()
+    if wait:
+        thread.join(timeout)
+
+
+def end_session(model: str, on_done=None, wait: bool = False, timeout: float = 60) -> bool:
+    """The conversation is over (bye, STOP, idle, quit): summarize it into long-term memory
+    and start a fresh one. wait=True blocks until the summary is saved (or timeout).
+
+    Returns True if there was a session worth summarizing.
+    """
+    queued = _queue(history.take())
+    if queued or _has_pending():
+        _run_summaries(model, on_done, wait, timeout)
+    return queued
+
+
+def _has_pending() -> bool:
+    folder = _pending_dir()
+    return folder.exists() and any(folder.glob("*.json"))
+
+
+def recover_session(model: str, on_done=None) -> bool:
+    """At startup: summarize a session the app never got to finish (crash, force quit,
+    closed window) and any summaries that failed before. Returns True if there was work."""
+    path = _session_file()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            data = None
+        _queue(data)
+        path.unlink(missing_ok=True)
+    if not _has_pending():
+        return False
+    _event("recover", "summarizing an unsaved earlier session")
+    _run_summaries(model, on_done)
     return True
 
 
@@ -117,7 +212,7 @@ def stats() -> dict:
 
 
 __all__ = [
-    "history", "remember", "recall", "forget", "context_for", "end_session",
+    "history", "remember", "recall", "forget", "context_for", "end_session", "recover_session",
     "set_event_handler", "stats", "store", "embeddings",
     "RECALL_K", "RECALL_THRESHOLD", "INCLUDE_ALL_BELOW",
 ]

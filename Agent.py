@@ -21,6 +21,7 @@ from Personality import (
     search_announcement,
 )
 from Tools.notes import parse_note_request
+from Tools.timers import cancel_timer, list_timers, parse_timer_request, set_timer
 from Tools.schedule import (
     find_rename_target,
     is_confirmation,
@@ -340,6 +341,44 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "set_timer",
+            "description": "Start a countdown timer: 'set a 25 minute timer', 'pasta timer for 10 minutes'. Not for clock times (use add_note for 'remind me at 5').",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "minutes": {"type": "number", "description": "Length in minutes (1.5 = 90 seconds)."},
+                    "seconds": {"type": "number", "description": "Extra seconds. Optional."},
+                    "label": {"type": "string", "description": "Optional name, e.g. pasta."},
+                },
+                "required": ["minutes"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "cancel_timer",
+            "description": "Cancel a running timer by its name, or all timers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "timer": {"type": "string", "description": "The timer's name, e.g. pasta. Empty if only one is running."},
+                    "all_timers": {"type": "boolean", "description": "true to cancel every timer."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_timers",
+            "description": "Running timers and how much time each has left.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "add_note",
             "description": (
                 "Save a reminder note for the REMINDERS tab: 'remind me to bring "
@@ -574,6 +613,9 @@ FUNCTIONS = {
     "place_event": place_event,
     "clear_day": clear_day,
     "add_note": add_note,
+    "set_timer": set_timer,
+    "cancel_timer": cancel_timer,
+    "list_timers": list_timers,
     "list_notes": list_notes,
     "complete_note": complete_note,
     "clear_notes": clear_notes,
@@ -709,6 +751,26 @@ def _quick_schedule(user_text: str) -> str | None:
     if result.startswith("Error: that conflicts with " + args["title"]):
         return f"{args['title']} is already on your schedule, sir."
     return "I could not add that. " + result.removeprefix("Error: ")
+
+
+def _quick_timer(user_text: str) -> str | None:
+    """'set a 25 minute timer', 'cancel the pasta timer', 'how long is left?' -> handled directly."""
+    try:
+        parsed = parse_timer_request(user_text)
+    except Exception:
+        return None
+    if not parsed:
+        return None
+    if parsed["action"] == "set":
+        result = FUNCTIONS["set_timer"](minutes=parsed["seconds"] / 60, label=parsed["label"])
+    elif parsed["action"] == "cancel":
+        result = FUNCTIONS["cancel_timer"](timer=parsed["timer"], all_timers=parsed["all"])
+    else:
+        return str(FUNCTIONS["list_timers"]())
+    result = str(result)
+    if result.startswith("Error: "):
+        return result.removeprefix("Error: ")
+    return result + ", sir."
 
 
 def _quick_notes(user_text: str) -> str | None:
@@ -857,7 +919,7 @@ def run_turn(user_text: str) -> str:
 
     reset_untrusted()
 
-    quick = _quick_schedule(user_text)
+    quick = _quick_timer(user_text) or _quick_schedule(user_text)
     if quick:
         Memory.history.add_turn(user_text, quick)
         return quick

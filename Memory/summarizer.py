@@ -14,8 +14,23 @@ PROMPT = (
 )
 
 
+BUDGET = 9000   # characters of transcript sent to the model (a long session keeps its newest part)
+
+
+def _transcript(turns: list[tuple[str, str]]) -> str:
+    lines, used = [], 0
+    for u, a in reversed(turns):
+        line = f"User: {u[:400]}\nJarvis: {a[:400]}"
+        if used + len(line) > BUDGET and lines:
+            lines.append("(earlier part of the conversation omitted)")
+            break
+        lines.append(line)
+        used += len(line)
+    return "\n".join(reversed(lines))
+
+
 def summarize(turns: list[tuple[str, str]], model: str) -> str:
-    transcript = "\n".join(f"User: {u}\nJarvis: {a}" for u, a in turns)
+    transcript = _transcript(turns)
     response = Llm.chat(
         model,
         [

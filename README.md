@@ -1,4 +1,4 @@
-# Jarvis V0.7
+# Jarvis V0.8
 
 A local, voice-first assistant built around Ollama, with a holographic control-center UI, a personality, long-term memory, a clock, a schedule you can talk to (with spoken reminders and a Reminders tab for "don't forget" notes), a "Jarvis wake up" wake word, filesystem tools, a controlled Python runner, Tavily web search, and a permanent log book.
 
@@ -39,6 +39,7 @@ Jarvis/
 │   ├── schedule.py          <- the schedule: events, goals, homework, days off, week planner
 │   ├── notes.py             <- the Reminders tab: "don't forget" notes (Schedule_data/notes.json)
 │   ├── reminders.py         <- spoken and silent reminders ("Sir, we have ... scheduled for ...")
+│   ├── timers.py            <- countdown timers ("set a 25 minute timer"), saved in Schedule_data/timers.json
 │   ├── system.py            <- everything that differs per operating system (voice, notifications, app check)
 │   ├── python_runner.py
 │   ├── web_search.py
@@ -231,11 +232,22 @@ New in V0.5:
 ## Tuning
 
 - `Personality.py`: USER_ADDRESS, VOICE, persona text and examples
-- `Memory/history.py`: MAX_TURNS (10)
+- `Memory/history.py`: MAX_TURNS (10), MAX_FULL_TURNS (120, kept for the summary)
+- `Server.py`: STANDBY_SAVE_SECONDS (90), IDLE_SAVE_MINUTES (10)
 - `Memory/__init__.py`: RECALL_K (4), RECALL_THRESHOLD (0.4), INCLUDE_ALL_BELOW (12)
 - `Memory/store.py`: PROFILE_WORD_CAP (500), MAX_FACT_CHARS (300)
 - `Agent.py`: MODEL, MAX_TOOL_CALLS, PERSONA_ON_WRITES (set False for speed)
 - `Llm.py`: THINK (True lets reasoning models think before answering)
+
+## What's new in V0.8
+
+- **Memory is saved however a conversation ends (bug fix).** Before, the end-of-session summary only happened when you said "bye", so STOP, closing the window or a crash lost it. Now:
+  - the conversation is written to `memory_data/session_current.json` after every turn;
+  - it is summarized when you say bye, after 90 seconds in STANDBY (STOP, tapping the core, SHUT DOWN, or after a typed message), after 10 minutes of listening with nothing said, and when you close the app;
+  - a conversation the app never got to save (force quit, crash, power cut) is summarized the next time Jarvis starts;
+  - if the summary fails (for example Ollama is not running), the conversation is kept and tried again later;
+  - the summary now covers the whole conversation, not just the last 10 turns.
+- **Timers:** "set a 25 minute timer", "set a pasta timer for 10 minutes", "how much time is left?", "cancel the pasta timer", "cancel all timers". When one ends Jarvis says so and shows a notification (even in quiet hours). Timers survive a restart, and one that ended while the app was closed is reported when it opens.
 
 ## What's new in V0.7
 
@@ -275,7 +287,6 @@ New in V0.5:
 ## Known limitations
 
 - Check the model tag and tool support with `ollama show`.
-- Session summaries only happen when you say "bye" (not on STOP or closing the window).
 - The first reply after a model switch is slow while Ollama loads it.
 - With little data, the keyword fallback can miss paraphrases; install `nomic-embed-text`.
 - No weather tool (tried and removed). Ask for the weather and Jarvis searches the web.
@@ -290,10 +301,10 @@ Check `git status` before every commit: `.env`, `logs/`, `memory_data/`, `Schedu
 
 ```bash
 git add .
-git commit -m "V0.7: platform layer"
+git commit -m "V0.8: memory saved however a session ends, timers"
 git push
-git tag -a v0.7 -m "Jarvis V0.7 - platform layer"
-git push origin v0.7
+git tag -a v0.8 -m "Jarvis V0.8 - memory fix and timers"
+git push origin v0.8
 ```
 
-**Current version:** V0.7, platform layer
+**Current version:** V0.8, memory fix and timers
