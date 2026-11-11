@@ -4,7 +4,7 @@ Two views of the same conversation:
   * the window: the last few turns, given to the model every turn (small context);
   * the full transcript: every turn of the session, used for the end-of-session summary.
 
-Only the user's words and Jarvis's final reply are kept. Tool calls and raw
+Only the user's words and the assistant's final reply are kept. Tool calls and raw
 tool output are dropped so they don't eat the (small) context window.
 
 Every change is passed to on_change (set by Memory), which writes the session to disk,
@@ -15,7 +15,7 @@ from __future__ import annotations
 import threading
 import time
 
-MAX_TURNS = 10        # one turn = one user message + one Jarvis reply (the model's window)
+MAX_TURNS = 10        # one turn = one user message + one reply (the model's window)
 MAX_CHARS = 700       # each stored message is trimmed to this length
 MAX_FULL_TURNS = 120  # the transcript kept for the summary
 

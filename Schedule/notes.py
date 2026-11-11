@@ -18,7 +18,14 @@ import threading
 import uuid
 from datetime import date, datetime, timedelta
 
-from . import schedule as S
+import paths
+import Strings
+
+from . import parsers as P
+from . import permission
+from . import rules as R
+from . import store as ST
+from . import timeparse as TP
 
 _lock = threading.RLock()
 MORNING = 7 * 60 + 30      # a note with a day but no time is delivered at 7:30
@@ -26,7 +33,7 @@ MORNING = 7 * 60 + 30      # a note with a day but no time is delivered at 7:30
 
 # --- storage --------------------------------------------------------------------------
 def _file():
-    return S.DATA_DIR / "notes.json"
+    return paths.SCHEDULE_DIR / "notes.json"
 
 
 def _load() -> dict:
@@ -40,7 +47,7 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
-    S.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    paths.SCHEDULE_DIR.mkdir(parents=True, exist_ok=True)
     tmp = _file().with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     os.replace(tmp, _file())
@@ -60,9 +67,9 @@ def _when(note: dict, today: date | None = None) -> str:
     if not note.get("date"):
         return ""
     d = date.fromisoformat(note["date"])
-    word = ("today" if d == today else "tomorrow" if d == today + timedelta(days=1) else S._pretty_day(d))
+    word = ("today" if d == today else "tomorrow" if d == today + timedelta(days=1) else TP._pretty_day(d))
     if note.get("time"):
-        word += " " + S._fmt(S._to_min(note["time"]))
+        word += " " + TP._fmt(TP._to_min(note["time"]))
     return word
 
 
@@ -86,11 +93,11 @@ def add_note(text: str, date: str = "", time: str = "") -> str:      # noqa: A00
         text = " ".join(str(text).split()).strip(" .,;")
         if not text:
             return "Error: the note needs some text."
-        day = S._to_date(date).isoformat() if str(date or "").strip() else ""
-        clock = S._hhmm(S._to_min(time)) if str(time or "").strip() else ""
+        day = TP._to_date(date).isoformat() if str(date or "").strip() else ""
+        clock = TP._hhmm(TP._to_min(time)) if str(time or "").strip() else ""
         if clock and not day:
             now = datetime.now()
-            day = (now.date() if S._to_min(clock) > now.hour * 60 + now.minute
+            day = (now.date() if TP._to_min(clock) > now.hour * 60 + now.minute
                    else now.date() + timedelta(days=1)).isoformat()
         text = text[0].upper() + text[1:]
         with _lock:
@@ -174,7 +181,7 @@ def clear_notes(done_only: bool = True) -> str:
         gone = [n for n in data["notes"] if n.get("done") or not done_only]
         if not gone:
             return "There is nothing to clear."
-        if not done_only and not S.ask_permission("clear all reminders", f"{len(gone)} notes",
+        if not done_only and not permission.ask("clear all reminders", f"{len(gone)} notes",
                                                   "; ".join(n["text"] for n in gone[:8])):
             return "The user declined this time, so nothing changed. If they ask again, call clear_notes again."
         data["notes"] = [n for n in data["notes"] if n not in gone]
@@ -195,21 +202,21 @@ def upcoming_alerts(now: datetime | None = None, limit: int = 6) -> list[dict]:
     """The next scheduled alerts: events that remind you, over the coming week."""
     now = now or datetime.now()
     try:
-        data = S._load()
+        data = ST._load()
     except RuntimeError:
         return []
     lead = int((data["settings"].get("reminders") or {}).get("lead_minutes", 15))
     out = []
     for offset in range(7):
         day = now.date() + timedelta(days=offset)
-        label = "Today" if offset == 0 else "Tomorrow" if offset == 1 else S._pretty_day(day)
+        label = "Today" if offset == 0 else "Tomorrow" if offset == 1 else TP._pretty_day(day)
         for ev in data["events"]:
-            if ev.get("remind") is False or not S._shows(data, ev, day):
+            if ev.get("remind") is False or not R._shows(data, ev, day):
                 continue
-            start = S._to_min(ev["start"])
+            start = TP._to_min(ev["start"])
             if offset == 0 and start <= now.hour * 60 + now.minute:
                 continue
-            out.append({"sort": (offset, start), "when": f"{label} {S._fmt(start)}", "title": ev["title"],
+            out.append({"sort": (offset, start), "when": f"{label} {TP._fmt(start)}", "title": ev["title"],
                         "lead": lead})
     out.sort(key=lambda x: x["sort"])
     return [{"when": o["when"], "title": o["title"], "lead": o["lead"]} for o in out[:limit]]
@@ -232,22 +239,22 @@ def due_notes(now: datetime | None = None) -> list[dict]:
     now = now or datetime.now()
     today, nm = now.date().isoformat(), now.hour * 60 + now.minute
     try:
-        cfg = (S._load()["settings"].get("reminders") or {})
+        cfg = (ST._load()["settings"].get("reminders") or {})
     except RuntimeError:
         cfg = {}
-    quiet_s = (cfg.get("quiet_until") or {}).get(S.DAY_CODES[now.weekday()])
-    quiet = S._to_min(quiet_s) if quiet_s else 0
+    quiet_s = (cfg.get("quiet_until") or {}).get(TP.DAY_CODES[now.weekday()])
+    quiet = TP._to_min(quiet_s) if quiet_s else 0
     out = []
     for n in _load()["notes"]:
         if n.get("done") or n.get("date") != today:
             continue
         timed = bool(n.get("time"))
-        at = S._to_min(n["time"]) if timed else MORNING
+        at = TP._to_min(n["time"]) if timed else MORNING
         end = at + 180 if timed else 22 * 60
         if at <= nm <= end:
-            text = (f"Sir, a reminder: {n['text']}." if timed else f"Sir, don't forget: {n['text']}.")
+            text = Strings.note_reminder(n["text"]) if timed else Strings.note_morning(n["text"])
             out.append({"key": f"note|{n['id']}|{n['date']}|{n.get('time', '')}", "title": n["text"],
-                        "start": S._fmt(at), "quiet": at < quiet, "text": text})
+                        "start": TP._fmt(at), "quiet": at < quiet, "text": text})
     return out
 
 
@@ -298,28 +305,28 @@ def _split_when(rest: str, now: datetime | None = None) -> tuple[str, str, str]:
             clock = "12:00"
             text = text[:m.start()] + " " + text[m.end():]
         else:
-            at = S._AT.search(text)
+            at = P._AT.search(text)
             if at:
                 g = at.groups()
                 h, mi, mer = (g[0], g[1], g[2]) if g[0] else (g[3], g[4], g[5])
-                clock = S._hhmm(S._clock(h, mi, mer))
+                clock = TP._hhmm(P._clock(h, mi, mer))
                 text = text[:at.start()] + " " + text[at.end():]
 
-    for m in S._DATEWORD.finditer(text):
+    for m in P._DATEWORD.finditer(text):
         tok = re.sub(r"^(this|next) ", "", m.group(1).lower()).replace("tonight", "today")
         weekday = re.fullmatch(r"(mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?s?", tok)
         if weekday and not tok.endswith(("day", "days")) \
                 and not re.search(r"\b(on|this|next|for|by|until|before)\s+$", text[:m.start()], re.I):
             continue                       # "sun hat" is not Sunday
         try:
-            day = S._to_date(tok.rstrip("s") if weekday and tok.endswith("days") else tok).isoformat()
+            day = TP._to_date(tok.rstrip("s") if weekday and tok.endswith("days") else tok).isoformat()
         except ValueError:
             continue
         text = text[:m.start()] + " " + text[m.end():]
         break
 
     if clock and not day:
-        day = (now.date() if S._to_min(clock) > now.hour * 60 + now.minute else now.date() + timedelta(days=1)).isoformat()
+        day = (now.date() if TP._to_min(clock) > now.hour * 60 + now.minute else now.date() + timedelta(days=1)).isoformat()
     words = text.split()
     while words and words[0].lower().strip(",") in _FRONT:
         words.pop(0)
@@ -333,7 +340,7 @@ def parse_note_request(text: str) -> dict | None:
     t = " ".join(text.replace("’", "'").split())
     if not t:
         return None
-    if not S._QUESTION.search(t):
+    if not P._QUESTION.search(t):
         for rx in _ADD:
             m = rx.search(t)
             if m:
@@ -348,7 +355,7 @@ def parse_note_request(text: str) -> dict | None:
     if m:
         return {"action": "delete", "note": m.group("n").strip(" .,")}
     m = _CLEAR.search(t)
-    if m and not S._DATEWORD.search(t):
+    if m and not P._DATEWORD.search(t):
         return {"action": "clear", "done_only": bool(m.group("done"))}
     if _LIST.search(t) and not re.search(r"\bremind\s+me\b", t, re.I):
         return {"action": "list"}

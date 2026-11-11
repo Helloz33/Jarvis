@@ -1,4 +1,4 @@
-"""Jarvis V0.4 backend: serves the HUD and bridges it to your existing agent.
+"""Backend: serves the HUD and bridges it to the agent.
 
 Agent.py's logic is untouched. We wrap the functions in Agent.FUNCTIONS so every
 tool call is logged and pushed to the UI, and we register a confirmation
@@ -18,29 +18,29 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 import Agent
 import Memory
-from Personality import AUTO_LISTEN_ON_START, VOICE, greeting
+import Config
+from Personality import AUTO_LISTEN_ON_START, greeting
+import paths
+from Schedule import notes as notes_tools
+from Schedule import timers, week_view
 from Tools import SANDBOX, listen, notes_view, reminders, set_confirm_handler, speak
-from Tools import notes as notes_tools
 from Tools import system
-from Tools import timers
-from Tools.schedule import week_view
 
 PORT = 8765
-ITERATION = "V0.8"
+ITERATION = "V0.8.1"
 ROOT = Path(__file__).resolve().parent
 UI_FILE = ROOT / "ui" / "index.html"
-LOG_FILE = ROOT / "logs" / "logbook.jsonl"
 EXIT_WORDS = {"exit", "quit", "bye"}
 # The conversation is saved to long-term memory however it ends (see Memory.end_session):
 STANDBY_SAVE_SECONDS = 90   # in STANDBY (STOP, tapping the core, SHUT DOWN, after a typed turn) for this long: save
 IDLE_SAVE_MINUTES = 10      # still listening but nothing said for this long: save
 CONFIRM_TIMEOUT_SECONDS = 120
 # Only pages served by this app may open the WebSocket (stops other websites
-# open in your browser from talking to Jarvis).
+# open in your browser from talking to the assistant).
 ALLOWED_ORIGINS = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
 
 CATEGORY = {
@@ -50,7 +50,9 @@ CATEGORY = {
     "remember": "MEMORY", "recall": "MEMORY", "forget": "MEMORY",
     "list_schedule": "RUN", "add_event": "RUN", "place_event": "RUN", "clear_day": "RUN", "add_note": "RUN", "set_timer": "RUN", "cancel_timer": "RUN", "list_timers": "RUN", "list_notes": "RUN", "complete_note": "RUN", "clear_notes": "RUN", "update_event": "RUN",
     "delete_event": "RUN", "set_goal": "RUN", "set_day_off": "RUN", "adjust_homework": "RUN", "plan_week": "RUN",
+    "add_task": "RUN", "list_tasks": "RUN", "update_task": "RUN", "log_task_progress": "RUN", "delete_task": "RUN",
 }
+TASK_CHECK_MINUTES = 10     # how often task plans are brought up to date (missed sessions are re-planned)
 
 
 def classify(result) -> str:
@@ -92,6 +94,10 @@ def describe(name: str, kwargs: dict, result) -> str:
     if name == "set_timer":
         mins = kwargs.get("minutes", 0) or 0
         return f"{kwargs.get('label') or 'timer'} ({mins:g} min)" if isinstance(mins, (int, float)) else str(kwargs.get("label", "timer"))
+    if name in ("add_task", "update_task", "log_task_progress", "delete_task"):
+        return str(kwargs.get("title") or kwargs.get("task", ""))
+    if name == "list_tasks":
+        return "tasks"
     if name in ("cancel_timer", "list_timers"):
         return str(kwargs.get("timer", "")) or "timers"
     if name == "complete_note":
@@ -131,10 +137,11 @@ class Hub:
         self._load_logs()
 
     def _load_logs(self) -> None:
-        if not LOG_FILE.exists():
+        log_file = paths.LOG_DIR / "logbook.jsonl"
+        if not log_file.exists():
             return
         try:
-            for line in LOG_FILE.read_text(encoding="utf-8").splitlines()[-500:]:
+            for line in log_file.read_text(encoding="utf-8").splitlines()[-500:]:
                 entry = json.loads(line)
                 self.logs.append(entry)
                 self.counts[entry["cat"]] = self.counts.get(entry["cat"], 0) + 1
@@ -155,6 +162,7 @@ class Hub:
         return {
             "type": "snapshot",
             "model": Agent.MODEL,
+            "name": Config.NAME,
             "iteration": ITERATION,
             "sandbox": str(SANDBOX).replace(home, "~"),
             "files": self.file_count(),
@@ -170,8 +178,13 @@ class Hub:
 
     # -- broadcasting ----------------------------------------------------
     def emit(self, event: dict) -> None:
-        if self.loop is not None:
-            asyncio.run_coroutine_threadsafe(self._broadcast(event), self.loop)
+        loop = self.loop
+        if loop is None or loop.is_closed():
+            return                       # the app is shutting down: nobody is listening any more
+        try:
+            asyncio.run_coroutine_threadsafe(self._broadcast(event), loop)
+        except RuntimeError:
+            pass
 
     async def _broadcast(self, event: dict) -> None:
         for ws in list(self.clients):
@@ -198,8 +211,8 @@ class Hub:
             self.logs.append(entry)
             self.counts[cat] = self.counts.get(cat, 0) + 1
             try:
-                LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-                with LOG_FILE.open("a", encoding="utf-8") as fh:
+                paths.LOG_DIR.mkdir(parents=True, exist_ok=True)
+                with (paths.LOG_DIR / "logbook.jsonl").open("a", encoding="utf-8") as fh:
                     fh.write(json.dumps(entry) + "\n")
             except OSError:
                 pass
@@ -214,7 +227,8 @@ hub = Hub()
 
 
 NOTE_TOOLS = {"add_note", "list_notes", "complete_note", "clear_notes"}
-SCHEDULE_TOOLS = {"add_event", "place_event", "clear_day", "update_event", "delete_event", "set_goal", "set_day_off", "adjust_homework", "plan_week"}
+SCHEDULE_TOOLS = {"add_event", "place_event", "clear_day", "update_event", "delete_event", "set_goal", "set_day_off",
+                  "adjust_homework", "plan_week", "add_task", "update_task", "log_task_progress", "delete_task"}
 
 
 def instrument_tools() -> None:
@@ -343,7 +357,7 @@ class Session:
                 pass
 
     def check_session(self, now: float | None = None) -> str:
-        """Save the conversation once Jarvis has been in STANDBY for 90 seconds (however it got
+        """Save the conversation once the assistant has been in STANDBY for 90 seconds (however it got
         there: STOP, tapping the core, SHUT DOWN, the end of a typed turn), or after 10 minutes
         of listening with nothing said."""
         if not len(Memory.history):
@@ -357,6 +371,22 @@ class Session:
             self.save_memory("idle")
             return "idle"
         return ""
+
+    def watch_tasks(self) -> None:
+        """Keep task plans up to date: a session that passed without progress counts as missed, and
+        its time is planned again; urgency rises as due dates come closer."""
+        import Schedule
+        while True:
+            try:
+                result = Schedule.plan_tasks()
+                if result:
+                    hub.add_log("plan_tasks", "RUN", result[:160], "ok")
+                    hub.emit(schedule_view())
+                    for line in [l for l in result.split(". ") if "treating it as" in l]:
+                        hub.toast(line.rstrip(".") + ".")
+            except Exception as exc:
+                print(f"[tasks] {exc}")
+            time.sleep(TASK_CHECK_MINUTES * 60)
 
     def say(self, text: str) -> None:
         """Typed fallback (open the UI with #dev) for testing without a mic."""
@@ -471,7 +501,7 @@ class Session:
     def _speak(self, text: str) -> None:
         text = text[:1200]
         # The system layer talks through the OS voice (interruptible); pyttsx3 is the last resort.
-        spoken = system.speak(text, VOICE, on_start=lambda p: setattr(self, "say_proc", p))
+        spoken = system.speak(text, Config.voice(), on_start=lambda p: setattr(self, "say_proc", p))
         if not spoken:
             speak(text)
 
@@ -497,6 +527,7 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=lambda: Memory.recover_session(Agent.MODEL, on_done=lambda: hub.emit(memory_list())),
                      daemon=True).start()
     threading.Thread(target=session.watch_session, daemon=True, name="session-watch").start()
+    threading.Thread(target=session.watch_tasks, daemon=True, name="task-watch").start()
     yield
     session.save_memory("app closed", wait=True)
 
@@ -506,7 +537,11 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 async def index():
-    return FileResponse(UI_FILE)
+    # The page says the assistant's name wherever it has __NAME__ / __NAME_UP__ / __NAME_DOTS__ (I.R.I.S).
+    html = UI_FILE.read_text(encoding="utf-8")
+    dots = ".".join(Config.NAME.upper()) + ("" if len(Config.NAME) > 1 else "")
+    return HTMLResponse(html.replace("__NAME_DOTS__", dots).replace("__NAME_UP__", Config.NAME.upper())
+                        .replace("__NAME__", Config.NAME))
 
 
 def handle(msg: dict) -> None:

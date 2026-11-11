@@ -15,7 +15,8 @@ import threading
 import time
 import uuid
 
-from . import schedule as S
+import paths
+import Strings
 
 MAX_SECONDS = 24 * 3600
 _lock = threading.Lock()
@@ -25,7 +26,7 @@ _deliver = None                          # deliver(text) when a timer ends
 
 
 def _file():
-    return S.DATA_DIR / "timers.json"
+    return paths.SCHEDULE_DIR / "timers.json"
 
 
 def _save() -> None:
@@ -63,7 +64,7 @@ def _fire(timer_id: str) -> None:
         _threads.pop(timer_id, None)
         _save()
     if t and _deliver:
-        _deliver(f"Sir, your {_name(t)} is done.")
+        _deliver(Strings.timer_done(_name(t)))
 
 
 def _arm(t: dict) -> None:
@@ -93,7 +94,7 @@ def start(deliver) -> None:
                 _arm(t)
         _save()
     for t in missed:
-        deliver(f"Sir, your {_name(t)} finished while I was closed.")
+        deliver(Strings.timer_missed(_name(t)))
 
 
 # --- tools -------------------------------------------------------------------------------

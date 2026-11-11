@@ -1,4 +1,4 @@
-"""Launch Jarvis as a desktop app.   Run:  python App.py"""
+"""Launch the assistant as a desktop app.   Run:  python App.py"""
 from __future__ import annotations
 
 import threading
@@ -9,6 +9,7 @@ import webbrowser
 import uvicorn
 
 import Agent
+import Config
 import Server as server
 
 URL = f"http://127.0.0.1:{server.PORT}"
@@ -27,7 +28,7 @@ def wait_until_up(timeout: float = 15.0) -> bool:
 
 
 def bring_to_front() -> None:
-    """Called once the window exists; makes Jarvis the active app, so it
+    """Called once the window exists; makes the app the active one, so it
     still appears when it was started in the background (wake word)."""
     try:
         from AppKit import NSApplication
@@ -43,6 +44,14 @@ def bring_to_front() -> None:
 def main() -> None:
     Agent.SANDBOX.mkdir(parents=True, exist_ok=True)
 
+    try:
+        urllib.request.urlopen(URL, timeout=1)
+        print(f"{Config.NAME} is already running ({URL}). Close the other window, or the Terminal tab "
+              "running it (Ctrl+C), then start it again.")
+        return
+    except Exception:
+        pass                             # nothing on the port yet: good
+
     if not Agent.check_ollama():
         return
 
@@ -50,15 +59,15 @@ def main() -> None:
     threading.Thread(target=uvicorn.Server(config).run, daemon=True).start()
 
     if not wait_until_up():
-        print(f"Error: the Jarvis server did not start. Is port {server.PORT} already in use?")
+        print(f"Error: the server did not start. Is port {server.PORT} already in use?")
         return
 
-    print(f"Jarvis UI running at {URL}")
+    print(f"{Config.NAME} UI running at {URL}")
 
     try:
         import webview  # pip install pywebview
         webview.create_window(
-            "Jarvis", URL, width=1440, height=900,
+            Config.NAME, URL, width=1440, height=900,
             fullscreen=FULLSCREEN, background_color="#05070b",
         )
         webview.start(bring_to_front)   # blocks until the window is closed

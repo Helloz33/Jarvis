@@ -13,7 +13,7 @@ import re
 import numpy as np
 import ollama
 
-EMBED_MODEL = os.getenv("JARVIS_EMBED_MODEL", "nomic-embed-text")
+EMBED_MODEL = os.getenv("IRIS_EMBED_MODEL") or os.getenv("JARVIS_EMBED_MODEL") or "nomic-embed-text"
 
 
 def embed(text: str) -> list[float] | None:

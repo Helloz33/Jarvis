@@ -1,0 +1,3307 @@
+[
+ [
+  "add:add an hour of physics at 2 pm",
+  {
+   "title": "Physics",
+   "start": "14:00",
+   "end": "15:00",
+   "date": "today"
+  }
+ ],
+ [
+  "place:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "hw:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "off:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "clear:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "confirm:add an hour of physics at 2 pm",
+  false
+ ],
+ [
+  "sounds:add an hour of physics at 2 pm",
+  true
+ ],
+ [
+  "note:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "timer:add an hour of physics at 2 pm",
+  null
+ ],
+ [
+  "add:add a study session from 6:10 to 6:40 pm tomorrow",
+  {
+   "title": "Study session",
+   "start": "18:10",
+   "end": "18:40",
+   "date": "tomorrow"
+  }
+ ],
+ [
+  "place:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "hw:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "off:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "clear:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "confirm:add a study session from 6:10 to 6:40 pm tomorrow",
+  false
+ ],
+ [
+  "sounds:add a study session from 6:10 to 6:40 pm tomorrow",
+  true
+ ],
+ [
+  "note:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "timer:add a study session from 6:10 to 6:40 pm tomorrow",
+  null
+ ],
+ [
+  "add:schedule chem review on friday at 7",
+  {
+   "title": "Chem review",
+   "start": "19:00",
+   "end": "20:00",
+   "date": "friday"
+  }
+ ],
+ [
+  "place:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "hw:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "off:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "clear:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "confirm:schedule chem review on friday at 7",
+  false
+ ],
+ [
+  "sounds:schedule chem review on friday at 7",
+  true
+ ],
+ [
+  "note:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "timer:schedule chem review on friday at 7",
+  null
+ ],
+ [
+  "add:set a physics session for 3 to 4 pm",
+  {
+   "title": "Physics session",
+   "start": "15:00",
+   "end": "16:00",
+   "date": "today"
+  }
+ ],
+ [
+  "place:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "hw:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "off:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "clear:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "confirm:set a physics session for 3 to 4 pm",
+  false
+ ],
+ [
+  "sounds:set a physics session for 3 to 4 pm",
+  true
+ ],
+ [
+  "note:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "timer:set a physics session for 3 to 4 pm",
+  null
+ ],
+ [
+  "add:what is on my schedule today",
+  null
+ ],
+ [
+  "place:what is on my schedule today",
+  null
+ ],
+ [
+  "hw:what is on my schedule today",
+  null
+ ],
+ [
+  "off:what is on my schedule today",
+  null
+ ],
+ [
+  "clear:what is on my schedule today",
+  null
+ ],
+ [
+  "confirm:what is on my schedule today",
+  false
+ ],
+ [
+  "sounds:what is on my schedule today",
+  false
+ ],
+ [
+  "note:what is on my schedule today",
+  null
+ ],
+ [
+  "timer:what is on my schedule today",
+  null
+ ],
+ [
+  "add:add math practice 4 to 5",
+  {
+   "title": "Math practice",
+   "start": "16:00",
+   "end": "17:00",
+   "date": "today"
+  }
+ ],
+ [
+  "place:add math practice 4 to 5",
+  null
+ ],
+ [
+  "hw:add math practice 4 to 5",
+  null
+ ],
+ [
+  "off:add math practice 4 to 5",
+  null
+ ],
+ [
+  "clear:add math practice 4 to 5",
+  null
+ ],
+ [
+  "confirm:add math practice 4 to 5",
+  false
+ ],
+ [
+  "sounds:add math practice 4 to 5",
+  true
+ ],
+ [
+  "note:add math practice 4 to 5",
+  null
+ ],
+ [
+  "timer:add math practice 4 to 5",
+  null
+ ],
+ [
+  "add:book a 30-minute session at 9 pm called reading",
+  {
+   "title": "Session",
+   "start": "21:00",
+   "end": "21:30",
+   "date": "today"
+  }
+ ],
+ [
+  "place:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "hw:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "off:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "clear:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "confirm:book a 30-minute session at 9 pm called reading",
+  false
+ ],
+ [
+  "sounds:book a 30-minute session at 9 pm called reading",
+  true
+ ],
+ [
+  "note:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "timer:book a 30-minute session at 9 pm called reading",
+  null
+ ],
+ [
+  "add:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "place:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  {
+   "titles": "Math test prep;Chem place test prep",
+   "minutes": 60
+  }
+ ],
+ [
+  "hw:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "off:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "clear:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "confirm:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  false
+ ],
+ [
+  "sounds:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  true
+ ],
+ [
+  "note:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "timer:add 2 hours of test prep, one for math and one for chem, place it how you see fit",
+  null
+ ],
+ [
+  "add:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "place:on Friday add a 1-hour session after my club called physics prep",
+  {
+   "title": "Physics prep",
+   "minutes": 60,
+   "day": "friday",
+   "after": "club"
+  }
+ ],
+ [
+  "hw:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "off:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "clear:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "confirm:on Friday add a 1-hour session after my club called physics prep",
+  false
+ ],
+ [
+  "sounds:on Friday add a 1-hour session after my club called physics prep",
+  true
+ ],
+ [
+  "note:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "timer:on Friday add a 1-hour session after my club called physics prep",
+  null
+ ],
+ [
+  "add:find me some time for spanish next week",
+  null
+ ],
+ [
+  "place:find me some time for spanish next week",
+  {
+   "title": "Spanish",
+   "minutes": 60,
+   "within": "next week"
+  }
+ ],
+ [
+  "hw:find me some time for spanish next week",
+  null
+ ],
+ [
+  "off:find me some time for spanish next week",
+  null
+ ],
+ [
+  "clear:find me some time for spanish next week",
+  null
+ ],
+ [
+  "confirm:find me some time for spanish next week",
+  false
+ ],
+ [
+  "sounds:find me some time for spanish next week",
+  false
+ ],
+ [
+  "note:find me some time for spanish next week",
+  null
+ ],
+ [
+  "timer:find me some time for spanish next week",
+  null
+ ],
+ [
+  "add:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "place:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "hw:I have 3 hours of homework on thursday",
+  [
+   "day",
+   180,
+   "thursday"
+  ]
+ ],
+ [
+  "off:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "clear:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "confirm:I have 3 hours of homework on thursday",
+  false
+ ],
+ [
+  "sounds:I have 3 hours of homework on thursday",
+  false
+ ],
+ [
+  "note:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "timer:I have 3 hours of homework on thursday",
+  null
+ ],
+ [
+  "add:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "place:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "hw:set my homework to 90 minutes",
+  [
+   "default",
+   90,
+   ""
+  ]
+ ],
+ [
+  "off:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "clear:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "confirm:set my homework to 90 minutes",
+  false
+ ],
+ [
+  "sounds:set my homework to 90 minutes",
+  false
+ ],
+ [
+  "note:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "timer:set my homework to 90 minutes",
+  null
+ ],
+ [
+  "add:no homework friday",
+  null
+ ],
+ [
+  "place:no homework friday",
+  null
+ ],
+ [
+  "hw:no homework friday",
+  [
+   "day",
+   0,
+   "friday"
+  ]
+ ],
+ [
+  "off:no homework friday",
+  null
+ ],
+ [
+  "clear:no homework friday",
+  null
+ ],
+ [
+  "confirm:no homework friday",
+  false
+ ],
+ [
+  "sounds:no homework friday",
+  false
+ ],
+ [
+  "note:no homework friday",
+  null
+ ],
+ [
+  "timer:no homework friday",
+  null
+ ],
+ [
+  "add:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "place:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "hw:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "off:mark today and tomorrow as days off from school",
+  {
+   "ranges": [
+    [
+     "2026-11-09",
+     "2026-11-10"
+    ]
+   ],
+   "title": "No school",
+   "remove": false
+  }
+ ],
+ [
+  "clear:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "confirm:mark today and tomorrow as days off from school",
+  false
+ ],
+ [
+  "sounds:mark today and tomorrow as days off from school",
+  false
+ ],
+ [
+  "note:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "timer:mark today and tomorrow as days off from school",
+  null
+ ],
+ [
+  "add:undo the day off tomorrow",
+  null
+ ],
+ [
+  "place:undo the day off tomorrow",
+  null
+ ],
+ [
+  "hw:undo the day off tomorrow",
+  null
+ ],
+ [
+  "off:undo the day off tomorrow",
+  {
+   "ranges": [
+    [
+     "2026-11-10",
+     "2026-11-10"
+    ]
+   ],
+   "title": "No school",
+   "remove": true
+  }
+ ],
+ [
+  "clear:undo the day off tomorrow",
+  null
+ ],
+ [
+  "confirm:undo the day off tomorrow",
+  false
+ ],
+ [
+  "sounds:undo the day off tomorrow",
+  false
+ ],
+ [
+  "note:undo the day off tomorrow",
+  null
+ ],
+ [
+  "timer:undo the day off tomorrow",
+  null
+ ],
+ [
+  "add:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "place:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "hw:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "off:Thursday Nov 26 is a holiday",
+  {
+   "ranges": [
+    [
+     "2026-11-26",
+     "2026-11-26"
+    ]
+   ],
+   "title": "Holiday",
+   "remove": false
+  }
+ ],
+ [
+  "clear:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "confirm:Thursday Nov 26 is a holiday",
+  false
+ ],
+ [
+  "sounds:Thursday Nov 26 is a holiday",
+  false
+ ],
+ [
+  "note:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "timer:Thursday Nov 26 is a holiday",
+  null
+ ],
+ [
+  "add:no school mondays",
+  null
+ ],
+ [
+  "place:no school mondays",
+  null
+ ],
+ [
+  "hw:no school mondays",
+  null
+ ],
+ [
+  "off:no school mondays",
+  null
+ ],
+ [
+  "clear:no school mondays",
+  null
+ ],
+ [
+  "confirm:no school mondays",
+  false
+ ],
+ [
+  "sounds:no school mondays",
+  false
+ ],
+ [
+  "note:no school mondays",
+  null
+ ],
+ [
+  "timer:no school mondays",
+  null
+ ],
+ [
+  "add:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "place:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "hw:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "off:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "clear:remove all items on the Monday schedule",
+  {
+   "ranges": [
+    [
+     "2026-11-09",
+     "2026-11-09"
+    ]
+   ],
+   "what": ""
+  }
+ ],
+ [
+  "confirm:remove all items on the Monday schedule",
+  false
+ ],
+ [
+  "sounds:remove all items on the Monday schedule",
+  false
+ ],
+ [
+  "note:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "timer:remove all items on the Monday schedule",
+  null
+ ],
+ [
+  "add:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "place:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "hw:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "off:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "clear:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  {
+   "ranges": [
+    [
+     "2026-11-09",
+     "2026-11-10"
+    ]
+   ],
+   "what": "homework;physics;test prep"
+  }
+ ],
+ [
+  "confirm:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  false
+ ],
+ [
+  "sounds:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  false
+ ],
+ [
+  "note:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "timer:remove the homework and physics stuff and test prep on Monday and Tuesday",
+  null
+ ],
+ [
+  "add:clear wednesday",
+  null
+ ],
+ [
+  "place:clear wednesday",
+  null
+ ],
+ [
+  "hw:clear wednesday",
+  null
+ ],
+ [
+  "off:clear wednesday",
+  null
+ ],
+ [
+  "clear:clear wednesday",
+  {
+   "ranges": [
+    [
+     "2026-11-11",
+     "2026-11-11"
+    ]
+   ],
+   "what": ""
+  }
+ ],
+ [
+  "confirm:clear wednesday",
+  false
+ ],
+ [
+  "sounds:clear wednesday",
+  false
+ ],
+ [
+  "note:clear wednesday",
+  null
+ ],
+ [
+  "timer:clear wednesday",
+  null
+ ],
+ [
+  "add:do it",
+  null
+ ],
+ [
+  "place:do it",
+  null
+ ],
+ [
+  "hw:do it",
+  null
+ ],
+ [
+  "off:do it",
+  null
+ ],
+ [
+  "clear:do it",
+  null
+ ],
+ [
+  "confirm:do it",
+  true
+ ],
+ [
+  "sounds:do it",
+  false
+ ],
+ [
+  "note:do it",
+  null
+ ],
+ [
+  "timer:do it",
+  null
+ ],
+ [
+  "add:yes please",
+  null
+ ],
+ [
+  "place:yes please",
+  null
+ ],
+ [
+  "hw:yes please",
+  null
+ ],
+ [
+  "off:yes please",
+  null
+ ],
+ [
+  "clear:yes please",
+  null
+ ],
+ [
+  "confirm:yes please",
+  true
+ ],
+ [
+  "sounds:yes please",
+  false
+ ],
+ [
+  "note:yes please",
+  null
+ ],
+ [
+  "timer:yes please",
+  null
+ ],
+ [
+  "add:go ahead",
+  null
+ ],
+ [
+  "place:go ahead",
+  null
+ ],
+ [
+  "hw:go ahead",
+  null
+ ],
+ [
+  "off:go ahead",
+  null
+ ],
+ [
+  "clear:go ahead",
+  null
+ ],
+ [
+  "confirm:go ahead",
+  true
+ ],
+ [
+  "sounds:go ahead",
+  false
+ ],
+ [
+  "note:go ahead",
+  null
+ ],
+ [
+  "timer:go ahead",
+  null
+ ],
+ [
+  "add:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "place:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "hw:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "off:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "clear:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "confirm:rename the 6 to 7 session to chemistry",
+  false
+ ],
+ [
+  "sounds:rename the 6 to 7 session to chemistry",
+  false
+ ],
+ [
+  "note:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "timer:rename the 6 to 7 session to chemistry",
+  null
+ ],
+ [
+  "add:name that session calculus",
+  null
+ ],
+ [
+  "place:name that session calculus",
+  null
+ ],
+ [
+  "hw:name that session calculus",
+  null
+ ],
+ [
+  "off:name that session calculus",
+  null
+ ],
+ [
+  "clear:name that session calculus",
+  null
+ ],
+ [
+  "confirm:name that session calculus",
+  false
+ ],
+ [
+  "sounds:name that session calculus",
+  false
+ ],
+ [
+  "note:name that session calculus",
+  null
+ ],
+ [
+  "timer:name that session calculus",
+  null
+ ],
+ [
+  "add:add something at 6: 4",
+  {
+   "title": "Something",
+   "start": "18:00",
+   "end": "19:00",
+   "date": "today"
+  }
+ ],
+ [
+  "place:add something at 6: 4",
+  null
+ ],
+ [
+  "hw:add something at 6: 4",
+  null
+ ],
+ [
+  "off:add something at 6: 4",
+  null
+ ],
+ [
+  "clear:add something at 6: 4",
+  null
+ ],
+ [
+  "confirm:add something at 6: 4",
+  false
+ ],
+ [
+  "sounds:add something at 6: 4",
+  true
+ ],
+ [
+  "note:add something at 6: 4",
+  null
+ ],
+ [
+  "timer:add something at 6: 4",
+  null
+ ],
+ [
+  "add:school is cancelled on friday",
+  null
+ ],
+ [
+  "place:school is cancelled on friday",
+  null
+ ],
+ [
+  "hw:school is cancelled on friday",
+  null
+ ],
+ [
+  "off:school is cancelled on friday",
+  {
+   "ranges": [
+    [
+     "2026-11-13",
+     "2026-11-13"
+    ]
+   ],
+   "title": "No school",
+   "remove": false
+  }
+ ],
+ [
+  "clear:school is cancelled on friday",
+  null
+ ],
+ [
+  "confirm:school is cancelled on friday",
+  false
+ ],
+ [
+  "sounds:school is cancelled on friday",
+  false
+ ],
+ [
+  "note:school is cancelled on friday",
+  null
+ ],
+ [
+  "timer:school is cancelled on friday",
+  null
+ ],
+ [
+  "add:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "place:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "hw:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "off:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "clear:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "confirm:remind me to bring my charger tomorrow",
+  false
+ ],
+ [
+  "sounds:remind me to bring my charger tomorrow",
+  false
+ ],
+ [
+  "note:remind me to bring my charger tomorrow",
+  {
+   "action": "add",
+   "text": "bring my charger",
+   "date": "2026-11-10",
+   "time": ""
+  }
+ ],
+ [
+  "timer:remind me to bring my charger tomorrow",
+  null
+ ],
+ [
+  "add:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "place:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "hw:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "off:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "clear:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "confirm:remind me at 7 pm to call dad",
+  false
+ ],
+ [
+  "sounds:remind me at 7 pm to call dad",
+  false
+ ],
+ [
+  "note:remind me at 7 pm to call dad",
+  {
+   "action": "add",
+   "text": "call dad",
+   "date": "2026-11-09",
+   "time": "19:00"
+  }
+ ],
+ [
+  "timer:remind me at 7 pm to call dad",
+  null
+ ],
+ [
+  "add:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "place:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "hw:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "off:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "clear:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "confirm:don't let me forget the permission slip",
+  false
+ ],
+ [
+  "sounds:don't let me forget the permission slip",
+  false
+ ],
+ [
+  "note:don't let me forget the permission slip",
+  {
+   "action": "add",
+   "text": "permission slip",
+   "date": "",
+   "time": ""
+  }
+ ],
+ [
+  "timer:don't let me forget the permission slip",
+  null
+ ],
+ [
+  "add:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "place:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "hw:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "off:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "clear:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "confirm:remind me in 30 minutes to stretch",
+  false
+ ],
+ [
+  "sounds:remind me in 30 minutes to stretch",
+  false
+ ],
+ [
+  "note:remind me in 30 minutes to stretch",
+  {
+   "action": "add",
+   "text": "stretch",
+   "date": "2026-11-09",
+   "time": "12:30"
+  }
+ ],
+ [
+  "timer:remind me in 30 minutes to stretch",
+  null
+ ],
+ [
+  "add:cross off the charger",
+  null
+ ],
+ [
+  "place:cross off the charger",
+  null
+ ],
+ [
+  "hw:cross off the charger",
+  null
+ ],
+ [
+  "off:cross off the charger",
+  null
+ ],
+ [
+  "clear:cross off the charger",
+  null
+ ],
+ [
+  "confirm:cross off the charger",
+  false
+ ],
+ [
+  "sounds:cross off the charger",
+  false
+ ],
+ [
+  "note:cross off the charger",
+  {
+   "action": "done",
+   "note": "charger"
+  }
+ ],
+ [
+  "timer:cross off the charger",
+  null
+ ],
+ [
+  "add:what do I need to remember?",
+  null
+ ],
+ [
+  "place:what do I need to remember?",
+  null
+ ],
+ [
+  "hw:what do I need to remember?",
+  null
+ ],
+ [
+  "off:what do I need to remember?",
+  null
+ ],
+ [
+  "clear:what do I need to remember?",
+  null
+ ],
+ [
+  "confirm:what do I need to remember?",
+  false
+ ],
+ [
+  "sounds:what do I need to remember?",
+  false
+ ],
+ [
+  "note:what do I need to remember?",
+  {
+   "action": "list"
+  }
+ ],
+ [
+  "timer:what do I need to remember?",
+  null
+ ],
+ [
+  "add:clear my done reminders",
+  null
+ ],
+ [
+  "place:clear my done reminders",
+  null
+ ],
+ [
+  "hw:clear my done reminders",
+  null
+ ],
+ [
+  "off:clear my done reminders",
+  null
+ ],
+ [
+  "clear:clear my done reminders",
+  null
+ ],
+ [
+  "confirm:clear my done reminders",
+  false
+ ],
+ [
+  "sounds:clear my done reminders",
+  false
+ ],
+ [
+  "note:clear my done reminders",
+  {
+   "action": "clear",
+   "done_only": true
+  }
+ ],
+ [
+  "timer:clear my done reminders",
+  null
+ ],
+ [
+  "add:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "place:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "hw:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "off:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "clear:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "confirm:remove the permission slip from my reminders",
+  false
+ ],
+ [
+  "sounds:remove the permission slip from my reminders",
+  false
+ ],
+ [
+  "note:remove the permission slip from my reminders",
+  {
+   "action": "delete",
+   "note": "permission slip"
+  }
+ ],
+ [
+  "timer:remove the permission slip from my reminders",
+  null
+ ],
+ [
+  "add:put milk on my reminders",
+  null
+ ],
+ [
+  "place:put milk on my reminders",
+  null
+ ],
+ [
+  "hw:put milk on my reminders",
+  null
+ ],
+ [
+  "off:put milk on my reminders",
+  null
+ ],
+ [
+  "clear:put milk on my reminders",
+  null
+ ],
+ [
+  "confirm:put milk on my reminders",
+  false
+ ],
+ [
+  "sounds:put milk on my reminders",
+  false
+ ],
+ [
+  "note:put milk on my reminders",
+  {
+   "action": "add",
+   "text": "milk",
+   "date": "",
+   "time": ""
+  }
+ ],
+ [
+  "timer:put milk on my reminders",
+  null
+ ],
+ [
+  "add:set a 25 minute timer",
+  null
+ ],
+ [
+  "place:set a 25 minute timer",
+  {
+   "title": "Timer",
+   "minutes": 25
+  }
+ ],
+ [
+  "hw:set a 25 minute timer",
+  null
+ ],
+ [
+  "off:set a 25 minute timer",
+  null
+ ],
+ [
+  "clear:set a 25 minute timer",
+  null
+ ],
+ [
+  "confirm:set a 25 minute timer",
+  false
+ ],
+ [
+  "sounds:set a 25 minute timer",
+  true
+ ],
+ [
+  "note:set a 25 minute timer",
+  null
+ ],
+ [
+  "timer:set a 25 minute timer",
+  {
+   "action": "set",
+   "seconds": 1500.0,
+   "label": ""
+  }
+ ],
+ [
+  "add:set a pasta timer for 10 minutes",
+  null
+ ],
+ [
+  "place:set a pasta timer for 10 minutes",
+  {
+   "title": "Pasta timer",
+   "minutes": 10
+  }
+ ],
+ [
+  "hw:set a pasta timer for 10 minutes",
+  null
+ ],
+ [
+  "off:set a pasta timer for 10 minutes",
+  null
+ ],
+ [
+  "clear:set a pasta timer for 10 minutes",
+  null
+ ],
+ [
+  "confirm:set a pasta timer for 10 minutes",
+  false
+ ],
+ [
+  "sounds:set a pasta timer for 10 minutes",
+  true
+ ],
+ [
+  "note:set a pasta timer for 10 minutes",
+  null
+ ],
+ [
+  "timer:set a pasta timer for 10 minutes",
+  {
+   "action": "set",
+   "seconds": 600.0,
+   "label": "pasta"
+  }
+ ],
+ [
+  "add:timer for an hour and a half",
+  null
+ ],
+ [
+  "place:timer for an hour and a half",
+  null
+ ],
+ [
+  "hw:timer for an hour and a half",
+  null
+ ],
+ [
+  "off:timer for an hour and a half",
+  null
+ ],
+ [
+  "clear:timer for an hour and a half",
+  null
+ ],
+ [
+  "confirm:timer for an hour and a half",
+  false
+ ],
+ [
+  "sounds:timer for an hour and a half",
+  false
+ ],
+ [
+  "note:timer for an hour and a half",
+  null
+ ],
+ [
+  "timer:timer for an hour and a half",
+  {
+   "action": "set",
+   "seconds": 5400.0,
+   "label": ""
+  }
+ ],
+ [
+  "add:how much time is left on my timer",
+  null
+ ],
+ [
+  "place:how much time is left on my timer",
+  null
+ ],
+ [
+  "hw:how much time is left on my timer",
+  null
+ ],
+ [
+  "off:how much time is left on my timer",
+  null
+ ],
+ [
+  "clear:how much time is left on my timer",
+  null
+ ],
+ [
+  "confirm:how much time is left on my timer",
+  false
+ ],
+ [
+  "sounds:how much time is left on my timer",
+  false
+ ],
+ [
+  "note:how much time is left on my timer",
+  null
+ ],
+ [
+  "timer:how much time is left on my timer",
+  {
+   "action": "list"
+  }
+ ],
+ [
+  "add:cancel all timers",
+  null
+ ],
+ [
+  "place:cancel all timers",
+  null
+ ],
+ [
+  "hw:cancel all timers",
+  null
+ ],
+ [
+  "off:cancel all timers",
+  null
+ ],
+ [
+  "clear:cancel all timers",
+  null
+ ],
+ [
+  "confirm:cancel all timers",
+  false
+ ],
+ [
+  "sounds:cancel all timers",
+  false
+ ],
+ [
+  "note:cancel all timers",
+  null
+ ],
+ [
+  "timer:cancel all timers",
+  {
+   "action": "cancel",
+   "timer": "",
+   "all": true
+  }
+ ],
+ [
+  "add:cancel the pasta timer",
+  null
+ ],
+ [
+  "place:cancel the pasta timer",
+  null
+ ],
+ [
+  "hw:cancel the pasta timer",
+  null
+ ],
+ [
+  "off:cancel the pasta timer",
+  null
+ ],
+ [
+  "clear:cancel the pasta timer",
+  null
+ ],
+ [
+  "confirm:cancel the pasta timer",
+  false
+ ],
+ [
+  "sounds:cancel the pasta timer",
+  false
+ ],
+ [
+  "note:cancel the pasta timer",
+  null
+ ],
+ [
+  "timer:cancel the pasta timer",
+  {
+   "action": "cancel",
+   "timer": "pasta",
+   "all": false
+  }
+ ],
+ [
+  "add:set a 2 minute timer for the eggs please",
+  null
+ ],
+ [
+  "place:set a 2 minute timer for the eggs please",
+  {
+   "title": "Timer for the eggs",
+   "minutes": 2
+  }
+ ],
+ [
+  "hw:set a 2 minute timer for the eggs please",
+  null
+ ],
+ [
+  "off:set a 2 minute timer for the eggs please",
+  null
+ ],
+ [
+  "clear:set a 2 minute timer for the eggs please",
+  null
+ ],
+ [
+  "confirm:set a 2 minute timer for the eggs please",
+  false
+ ],
+ [
+  "sounds:set a 2 minute timer for the eggs please",
+  true
+ ],
+ [
+  "note:set a 2 minute timer for the eggs please",
+  null
+ ],
+ [
+  "timer:set a 2 minute timer for the eggs please",
+  {
+   "action": "set",
+   "seconds": 120.0,
+   "label": "eggs"
+  }
+ ],
+ [
+  "to_min:8 pm",
+  1200
+ ],
+ [
+  "to_min:noon",
+  720
+ ],
+ [
+  "to_min:3:30 pm",
+  930
+ ],
+ [
+  "to_min:24:00",
+  1440
+ ],
+ [
+  "to_min:13",
+  780
+ ],
+ [
+  "to_min:7:61",
+  "EXC ValueError: could not read the time '7:61'"
+ ],
+ [
+  "to_date:today",
+  "2026-11-09"
+ ],
+ [
+  "to_date:tomorrow",
+  "2026-11-10"
+ ],
+ [
+  "to_date:friday",
+  "2026-11-13"
+ ],
+ [
+  "to_date:next monday",
+  "2026-11-16"
+ ],
+ [
+  "to_date:november 24",
+  "2026-11-24"
+ ],
+ [
+  "to_date:11/30",
+  "2026-11-30"
+ ],
+ [
+  "to_date:2026-12-01",
+  "2026-12-01"
+ ],
+ [
+  "to_date:jan 3",
+  "2027-01-03"
+ ],
+ [
+  "to_date:blah",
+  "EXC ValueError: could not read the date 'blah'; use YYYY-MM-DD, today, tomorrow or a weekday"
+ ],
+ [
+  "list0",
+  "Mon Nov 9: 7:30 AM-2:30 PM School (fixed) [s001]; 2:45 PM-4:00 PM Club (fixed) [c001]\nTue Nov 10: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]\nWed Nov 11: 7:30 AM-2:30 PM School (fixed) [s001]; 2:45 PM-4:00 PM Club (fixed) [c001]\nThu Nov 12: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]\nFri Nov 13: 7:30 AM-2:30 PM School (fixed) [s001]\nSat Nov 14: nothing scheduled\nSun Nov 15: nothing scheduled"
+ ],
+ [
+  "add1",
+  "Added flexible event: Physics 8:00 PM-9:00 PM (2026-11-09) [1de9]"
+ ],
+ [
+  "add2",
+  "Error: that conflicts with Club (2:45 PM-4:00 PM) on Mon Nov 9. Free on Mon Nov 9: 6:30 AM-7:30 AM, 4:00 PM-6:30 PM, 9:00 PM-11:00 PM."
+ ],
+ [
+  "add3",
+  "Added flexible event: Piano 5:00 PM-6:00 PM (every TU,TH from 2026-11-10) [08f0]"
+ ],
+ [
+  "add4",
+  "Error: the end time must be after the start time (events cannot pass midnight)."
+ ],
+ [
+  "add5",
+  "Added fixed event: Lab 4:00 PM-5:00 PM (2026-11-11) [1932]"
+ ],
+ [
+  "goal1",
+  "Goal set: Physics self-study, 180 minutes per week. Run plan_week to put it in the schedule."
+ ],
+ [
+  "goal2",
+  "Goal set: Spanish, 60 minutes per week on MO,WE,FR. Run plan_week to put it in the schedule."
+ ],
+ [
+  "plan1",
+  "Planned the week of Sun Nov 8:\nMon Nov 9: Homework 4:30 PM-6:30 PM; Physics self-study 9:00 PM-10:00 PM\nTue Nov 10: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nWed Nov 11: Homework 5:30 PM-6:30 PM; Homework 7:15 PM-8:15 PM; Spanish 5:00 PM-5:30 PM\nThu Nov 12: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nFri Nov 13: Physics self-study 3:00 PM-4:00 PM; Spanish 4:00 PM-4:30 PM\nSat Nov 14: Physics self-study 9:00 AM-10:00 AM"
+ ],
+ [
+  "view1",
+  {
+   "start": "2026-11-08",
+   "days": [
+    {
+     "date": "2026-11-08",
+     "label": "SUN 08",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": []
+    },
+    {
+     "date": "2026-11-09",
+     "label": "MON 09",
+     "today": true,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "c001",
+       "title": "Club",
+       "kind": "fixed",
+       "start": "14:45",
+       "end": "16:00"
+      },
+      {
+       "id": "0476",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "16:30",
+       "end": "18:30"
+      },
+      {
+       "id": "1de9",
+       "title": "Physics",
+       "kind": "flexible",
+       "start": "20:00",
+       "end": "21:00"
+      },
+      {
+       "id": "d30a",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "21:00",
+       "end": "22:00"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-10",
+     "label": "TUE 10",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "g001",
+       "title": "Gym",
+       "kind": "fixed",
+       "start": "15:00",
+       "end": "16:30"
+      },
+      {
+       "id": "08f0",
+       "title": "Piano",
+       "kind": "flexible",
+       "start": "17:00",
+       "end": "18:00"
+      },
+      {
+       "id": "040e",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "18:00",
+       "end": "18:30"
+      },
+      {
+       "id": "7bf7",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "19:15",
+       "end": "20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-11",
+     "label": "WED 11",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "c001",
+       "title": "Club",
+       "kind": "fixed",
+       "start": "14:45",
+       "end": "16:00"
+      },
+      {
+       "id": "1932",
+       "title": "Lab",
+       "kind": "fixed",
+       "start": "16:00",
+       "end": "17:00"
+      },
+      {
+       "id": "4436",
+       "title": "Spanish",
+       "kind": "flexible",
+       "start": "17:00",
+       "end": "17:30"
+      },
+      {
+       "id": "175e",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "17:30",
+       "end": "18:30"
+      },
+      {
+       "id": "d868",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "19:15",
+       "end": "20:15"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-12",
+     "label": "THU 12",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "g001",
+       "title": "Gym",
+       "kind": "fixed",
+       "start": "15:00",
+       "end": "16:30"
+      },
+      {
+       "id": "08f0",
+       "title": "Piano",
+       "kind": "flexible",
+       "start": "17:00",
+       "end": "18:00"
+      },
+      {
+       "id": "e166",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "18:00",
+       "end": "18:30"
+      },
+      {
+       "id": "aad1",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "19:15",
+       "end": "20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-13",
+     "label": "FRI 13",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "118d",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "15:00",
+       "end": "16:00"
+      },
+      {
+       "id": "4d6b",
+       "title": "Spanish",
+       "kind": "flexible",
+       "start": "16:00",
+       "end": "16:30"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-14",
+     "label": "SAT 14",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "83d9",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "09:00",
+       "end": "10:00"
+      }
+     ]
+    }
+   ],
+   "goals": [
+    {
+     "title": "Homework",
+     "minutes": 120,
+     "per": "day"
+    },
+    {
+     "title": "Physics self-study",
+     "minutes": 180,
+     "per": "week"
+    },
+    {
+     "title": "Spanish",
+     "minutes": 60,
+     "per": "week"
+    }
+   ]
+  }
+ ],
+ [
+  "place1",
+  "Placed Test prep on Tue Nov 10, 8:45 PM-9:45 PM; Test prep on Wed Nov 11, 8:15 PM-9:15 PM"
+ ],
+ [
+  "place2",
+  "Placed Math prep on Fri Nov 13, 4:30 PM-5:15 PM; Chem prep on Fri Nov 13, 5:15 PM-6:00 PM"
+ ],
+ [
+  "place3",
+  "Error: there is no free 60-minute gap for Physics prep. Free on Mon Nov 9: 6:30 AM-7:30 AM, 10:00 PM-11:00 PM."
+ ],
+ [
+  "place4",
+  "Placed Reading on Tue Nov 10, 4:30 PM-5:00 PM"
+ ],
+ [
+  "hw1",
+  "Homework on Thu Nov 12 is now 180 minutes.\nPlanned the week of Sun Nov 8:\nMon Nov 9: Homework 4:30 PM-6:30 PM; Physics self-study 9:00 PM-10:00 PM\nTue Nov 10: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nWed Nov 11: Homework 5:30 PM-6:30 PM; Homework 7:15 PM-8:15 PM; Spanish 5:00 PM-5:30 PM\nThu Nov 12: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-9:45 PM\nFri Nov 13: Physics self-study 3:00 PM-4:00 PM; Spanish 4:00 PM-4:30 PM\nSat Nov 14: Physics self-study 9:00 AM-10:00 AM"
+ ],
+ [
+  "hw2",
+  "No homework planned on Fri Nov 13.\nPlanned the week of Sun Nov 8:\nMon Nov 9: Homework 4:30 PM-6:30 PM; Physics self-study 9:00 PM-10:00 PM\nTue Nov 10: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nWed Nov 11: Homework 5:30 PM-6:30 PM; Homework 7:15 PM-8:15 PM; Spanish 5:00 PM-5:30 PM\nThu Nov 12: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-9:45 PM\nFri Nov 13: Physics self-study 3:00 PM-4:00 PM; Spanish 4:00 PM-4:30 PM\nSat Nov 14: Physics self-study 9:00 AM-10:00 AM"
+ ],
+ [
+  "list1",
+  "Mon Nov 9: 7:30 AM-2:30 PM School (fixed) [s001]; 2:45 PM-4:00 PM Club (fixed) [c001]; 4:30 PM-6:30 PM Homework [dec4]; 8:00 PM-9:00 PM Physics [1de9]; 9:00 PM-10:00 PM Physics self-study [b33b]\nTue Nov 10: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]; 4:30 PM-5:00 PM Reading [2ac7]; 5:00 PM-6:00 PM Piano [08f0]; 6:00 PM-6:30 PM Homework [2b83]; 7:15 PM-8:45 PM Homework [84eb]; 8:45 PM-9:45 PM Test prep [3335]\nWed Nov 11: 7:30 AM-2:30 PM School (fixed) [s001]; 2:45 PM-4:00 PM Club (fixed) [c001]; 4:00 PM-5:00 PM Lab (fixed) [1932]; 5:00 PM-5:30 PM Spanish [f8d0]; 5:30 PM-6:30 PM Homework [4669]; 7:15 PM-8:15 PM Homework [6a94]; 8:15 PM-9:15 PM Test prep [aa58]\nThu Nov 12: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]; 5:00 PM-6:00 PM Piano [08f0]; 6:00 PM-6:30 PM Homework [f068]; 7:15 PM-9:45 PM Homework [d72f]\nFri Nov 13: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:00 PM Physics self-study [d117]; 4:00 PM-4:30 PM Spanish [9496]; 4:30 PM-5:15 PM Math prep [1212]; 5:15 PM-6:00 PM Chem prep [b5c3]\nSat Nov 14: 9:00 AM-10:00 AM Physics self-study [3100]\nSun Nov 15: nothing scheduled"
+ ],
+ [
+  "upd1",
+  "Error: that conflicts with Physics self-study (9:00 PM-10:00 PM) on Mon Nov 9. Free on Mon Nov 9: 6:30 AM-7:30 AM, 7:15 PM-9:00 PM, 10:00 PM-11:00 PM."
+ ],
+ [
+  "upd2",
+  "Updated: Physics HW 8:00 PM-9:00 PM (2026-11-09) [1de9]"
+ ],
+ [
+  "del1",
+  "Error: no event with id or title 'Chem'. Use list_schedule to see ids."
+ ],
+ [
+  "del2",
+  "Error: no event with id or title 'nonexistent'. Use list_schedule to see ids."
+ ],
+ [
+  "off1",
+  "Marked Wed Nov 11 to Thu Nov 12 as a day off (In-service day). Run plan_week to re-plan."
+ ],
+ [
+  "off2",
+  "Removed the day off on Thu Nov 12. Run plan_week to re-plan."
+ ],
+ [
+  "clear1",
+  "Cleared Tue Nov 10: 1 session (Test prep). Left alone: Gym, School."
+ ],
+ [
+  "clear2",
+  "Cleared Fri Nov 13: 4 sessions (Physics self-study, Spanish, Math prep, Chem prep). Goals skip these days: Homework, Physics self-study, Spanish. Left alone: School."
+ ],
+ [
+  "plan2",
+  "Planned the week of Sun Nov 15:\nSun Nov 15: Homework 9:00 AM-11:00 AM; Physics self-study 11:00 AM-12:00 PM\nMon Nov 16: Homework 4:30 PM-6:30 PM; Spanish 4:00 PM-4:30 PM\nTue Nov 17: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nWed Nov 18: Homework 4:30 PM-6:30 PM\nThu Nov 19: Homework 6:00 PM-6:30 PM; Homework 7:15 PM-8:45 PM\nFri Nov 20: Physics self-study 3:00 PM-4:00 PM; Spanish 4:00 PM-4:30 PM\nSat Nov 21: Physics self-study 9:00 AM-10:00 AM"
+ ],
+ [
+  "list2",
+  "Mon Nov 9: 7:30 AM-2:30 PM School (fixed) [s001]; 2:45 PM-4:00 PM Club (fixed) [c001]; 4:30 PM-6:30 PM Homework [dec4]; 8:00 PM-9:00 PM Physics HW [1de9]; 9:00 PM-10:00 PM Physics self-study [b33b]\nTue Nov 10: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]; 4:30 PM-5:00 PM Reading [2ac7]; 5:00 PM-6:00 PM Piano [08f0]; 6:00 PM-6:30 PM Homework [2b83]; 7:15 PM-8:45 PM Homework [84eb]\nWed Nov 11 [DAY OFF: In-service day]: 4:00 PM-5:00 PM Lab (fixed) [1932]; 5:00 PM-5:30 PM Spanish [f8d0]; 5:30 PM-6:30 PM Homework [4669]; 7:15 PM-8:15 PM Homework [6a94]; 8:15 PM-9:15 PM Test prep [aa58]\nThu Nov 12: 7:30 AM-2:30 PM School (fixed) [s001]; 3:00 PM-4:30 PM Gym (fixed) [g001]; 5:00 PM-6:00 PM Piano [08f0]; 6:00 PM-6:30 PM Homework [f068]; 7:15 PM-9:45 PM Homework [d72f]\nFri Nov 13: 7:30 AM-2:30 PM School (fixed) [s001]\nSat Nov 14: 9:00 AM-10:00 AM Physics self-study [3100]\nSun Nov 15: 9:00 AM-11:00 AM Homework [fbd6]; 11:00 AM-12:00 PM Physics self-study [f312]"
+ ],
+ [
+  "view2",
+  {
+   "start": "2026-11-15",
+   "days": [
+    {
+     "date": "2026-11-15",
+     "label": "SUN 15",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "fbd6",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "09:00",
+       "end": "11:00"
+      },
+      {
+       "id": "f312",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "11:00",
+       "end": "12:00"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-16",
+     "label": "MON 16",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "c001",
+       "title": "Club",
+       "kind": "fixed",
+       "start": "14:45",
+       "end": "16:00"
+      },
+      {
+       "id": "75a6",
+       "title": "Spanish",
+       "kind": "flexible",
+       "start": "16:00",
+       "end": "16:30"
+      },
+      {
+       "id": "c978",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "16:30",
+       "end": "18:30"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-17",
+     "label": "TUE 17",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "g001",
+       "title": "Gym",
+       "kind": "fixed",
+       "start": "15:00",
+       "end": "16:30"
+      },
+      {
+       "id": "08f0",
+       "title": "Piano",
+       "kind": "flexible",
+       "start": "17:00",
+       "end": "18:00"
+      },
+      {
+       "id": "1418",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "18:00",
+       "end": "18:30"
+      },
+      {
+       "id": "e500",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "19:15",
+       "end": "20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-18",
+     "label": "WED 18",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "c001",
+       "title": "Club",
+       "kind": "fixed",
+       "start": "14:45",
+       "end": "16:00"
+      },
+      {
+       "id": "382a",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "16:30",
+       "end": "18:30"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-19",
+     "label": "THU 19",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "g001",
+       "title": "Gym",
+       "kind": "fixed",
+       "start": "15:00",
+       "end": "16:30"
+      },
+      {
+       "id": "08f0",
+       "title": "Piano",
+       "kind": "flexible",
+       "start": "17:00",
+       "end": "18:00"
+      },
+      {
+       "id": "caf4",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "18:00",
+       "end": "18:30"
+      },
+      {
+       "id": "ff97",
+       "title": "Homework",
+       "kind": "flexible",
+       "start": "19:15",
+       "end": "20:45"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-20",
+     "label": "FRI 20",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "s001",
+       "title": "School",
+       "kind": "fixed",
+       "start": "07:30",
+       "end": "14:30"
+      },
+      {
+       "id": "75f9",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "15:00",
+       "end": "16:00"
+      },
+      {
+       "id": "31d1",
+       "title": "Spanish",
+       "kind": "flexible",
+       "start": "16:00",
+       "end": "16:30"
+      }
+     ]
+    },
+    {
+     "date": "2026-11-21",
+     "label": "SAT 21",
+     "today": false,
+     "off": "",
+     "protected": [
+      {
+       "title": "Sleep",
+       "start": "00:00",
+       "end": "06:30"
+      },
+      {
+       "title": "Sleep",
+       "start": "23:00",
+       "end": "24:00"
+      },
+      {
+       "title": "Dinner",
+       "start": "18:30",
+       "end": "19:15"
+      }
+     ],
+     "events": [
+      {
+       "id": "db44",
+       "title": "Physics self-study",
+       "kind": "flexible",
+       "start": "09:00",
+       "end": "10:00"
+      }
+     ]
+    }
+   ],
+   "goals": [
+    {
+     "title": "Homework",
+     "minutes": 120,
+     "per": "day"
+    },
+    {
+     "title": "Physics self-study",
+     "minutes": 180,
+     "per": "week"
+    },
+    {
+     "title": "Spanish",
+     "minutes": 60,
+     "per": "week"
+    }
+   ]
+  }
+ ],
+ [
+  "due:2026-11-09 15:45",
+  []
+ ],
+ [
+  "due:2026-11-09 16:50",
+  []
+ ],
+ [
+  "due:2026-11-10 17:00",
+  [
+   {
+    "key": "2026-11-10|08f0|17:00",
+    "title": "Piano",
+    "start": "5:00 PM",
+    "quiet": false,
+    "text": "Sir, we have Piano scheduled for 5:00 PM."
+   }
+  ]
+ ],
+ [
+  "due:2026-11-11 18:00",
+  []
+ ],
+ [
+  "due:2026-11-13 19:50",
+  []
+ ],
+ [
+  "rename1",
+  "I could not tell which event to rename. Say the time, for example: rename the 6 to 7 PM session to calculus."
+ ],
+ [
+  "rename2",
+  [
+   "b33b",
+   "Calculus"
+  ]
+ ],
+ [
+  "final_data",
+  {
+   "settings": {
+    "study_window": {
+     "weekday": [
+      "15:00",
+      "22:00"
+     ],
+     "weekend": [
+      "09:00",
+      "22:00"
+     ]
+    },
+    "session_minutes": 60,
+    "reminders": {
+     "lead_minutes": 15,
+     "quiet_until": {
+      "MO": "18:00",
+      "WE": "18:00",
+      "FR": "18:00",
+      "TU": "17:00",
+      "TH": "17:00"
+     }
+    }
+   },
+   "protected": [
+    {
+     "title": "Sleep",
+     "days": [
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "FR",
+      "SA",
+      "SU"
+     ],
+     "start": "00:00",
+     "end": "06:30"
+    },
+    {
+     "title": "Sleep",
+     "days": [
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "FR",
+      "SA",
+      "SU"
+     ],
+     "start": "23:00",
+     "end": "24:00"
+    },
+    {
+     "title": "Dinner",
+     "days": [
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "FR",
+      "SA",
+      "SU"
+     ],
+     "start": "18:30",
+     "end": "19:15"
+    }
+   ],
+   "goals": [
+    {
+     "title": "Homework",
+     "minutes": 120,
+     "per": "day",
+     "days": [
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "SU"
+     ],
+     "session_minutes": 120,
+     "priority": true,
+     "buffer_minutes": 30,
+     "overrides": {
+      "2026-11-12": 180,
+      "2026-11-13": 0
+     },
+     "skip_dates": [
+      "2026-11-13"
+     ]
+    },
+    {
+     "title": "Physics self-study",
+     "minutes": 180,
+     "per": "week",
+     "days": [],
+     "session_minutes": 60,
+     "skip_dates": [
+      "2026-11-13"
+     ]
+    },
+    {
+     "title": "Spanish",
+     "minutes": 60,
+     "per": "week",
+     "days": [
+      "MO",
+      "WE",
+      "FR"
+     ],
+     "session_minutes": 30,
+     "skip_dates": [
+      "2026-11-13"
+     ]
+    }
+   ],
+   "events": [
+    {
+     "id": "s001",
+     "title": "School",
+     "kind": "fixed",
+     "days": [
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "FR"
+     ],
+     "start": "07:30",
+     "end": "14:30",
+     "school": true,
+     "remind": false
+    },
+    {
+     "id": "c001",
+     "title": "Club",
+     "kind": "fixed",
+     "days": [
+      "MO",
+      "WE"
+     ],
+     "start": "14:45",
+     "end": "16:00",
+     "remind": false
+    },
+    {
+     "id": "g001",
+     "title": "Gym",
+     "kind": "fixed",
+     "days": [
+      "TU",
+      "TH"
+     ],
+     "start": "15:00",
+     "end": "16:30",
+     "remind": false
+    },
+    {
+     "id": "1de9",
+     "title": "Physics HW",
+     "kind": "flexible",
+     "start": "20:00",
+     "end": "21:00",
+     "date": "2026-11-09"
+    },
+    {
+     "id": "08f0",
+     "title": "Piano",
+     "kind": "flexible",
+     "start": "17:00",
+     "end": "18:00",
+     "days": [
+      "TU",
+      "TH"
+     ],
+     "date": "2026-11-10"
+    },
+    {
+     "id": "1932",
+     "title": "Lab",
+     "kind": "fixed",
+     "start": "16:00",
+     "end": "17:00",
+     "date": "2026-11-11"
+    },
+    {
+     "id": "aa58",
+     "title": "Test prep",
+     "kind": "flexible",
+     "date": "2026-11-11",
+     "start": "20:15",
+     "end": "21:15"
+    },
+    {
+     "id": "2ac7",
+     "title": "Reading",
+     "kind": "flexible",
+     "date": "2026-11-10",
+     "start": "16:30",
+     "end": "17:00"
+    },
+    {
+     "id": "dec4",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-09",
+     "start": "16:30",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "2b83",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-10",
+     "start": "18:00",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "84eb",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-10",
+     "start": "19:15",
+     "end": "20:45",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "4669",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-11",
+     "start": "17:30",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "6a94",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-11",
+     "start": "19:15",
+     "end": "20:15",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "f068",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-12",
+     "start": "18:00",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "d72f",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-12",
+     "start": "19:15",
+     "end": "21:45",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "3100",
+     "title": "Physics self-study",
+     "kind": "flexible",
+     "date": "2026-11-14",
+     "start": "09:00",
+     "end": "10:00",
+     "auto": true
+    },
+    {
+     "id": "b33b",
+     "title": "Physics self-study",
+     "kind": "flexible",
+     "date": "2026-11-09",
+     "start": "21:00",
+     "end": "22:00",
+     "auto": true
+    },
+    {
+     "id": "f8d0",
+     "title": "Spanish",
+     "kind": "flexible",
+     "date": "2026-11-11",
+     "start": "17:00",
+     "end": "17:30",
+     "auto": true
+    },
+    {
+     "id": "fbd6",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-15",
+     "start": "09:00",
+     "end": "11:00",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "c978",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-16",
+     "start": "16:30",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "1418",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-17",
+     "start": "18:00",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "e500",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-17",
+     "start": "19:15",
+     "end": "20:45",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "382a",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-18",
+     "start": "16:30",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "caf4",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-19",
+     "start": "18:00",
+     "end": "18:30",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "ff97",
+     "title": "Homework",
+     "kind": "flexible",
+     "date": "2026-11-19",
+     "start": "19:15",
+     "end": "20:45",
+     "auto": true,
+     "priority": true
+    },
+    {
+     "id": "75f9",
+     "title": "Physics self-study",
+     "kind": "flexible",
+     "date": "2026-11-20",
+     "start": "15:00",
+     "end": "16:00",
+     "auto": true
+    },
+    {
+     "id": "db44",
+     "title": "Physics self-study",
+     "kind": "flexible",
+     "date": "2026-11-21",
+     "start": "09:00",
+     "end": "10:00",
+     "auto": true
+    },
+    {
+     "id": "f312",
+     "title": "Physics self-study",
+     "kind": "flexible",
+     "date": "2026-11-15",
+     "start": "11:00",
+     "end": "12:00",
+     "auto": true
+    },
+    {
+     "id": "31d1",
+     "title": "Spanish",
+     "kind": "flexible",
+     "date": "2026-11-20",
+     "start": "16:00",
+     "end": "16:30",
+     "auto": true
+    },
+    {
+     "id": "75a6",
+     "title": "Spanish",
+     "kind": "flexible",
+     "date": "2026-11-16",
+     "start": "16:00",
+     "end": "16:30",
+     "auto": true
+    }
+   ],
+   "days_off": [
+    {
+     "start": "2026-11-11",
+     "end": "2026-11-11",
+     "title": "In-service day"
+    }
+   ]
+  }
+ ],
+ [
+  "n1",
+  "Noted: Bring charger (tomorrow)."
+ ],
+ [
+  "n2",
+  "Noted: Call dad (today 7:00 PM)."
+ ],
+ [
+  "n3",
+  "Noted: Permission slip."
+ ],
+ [
+  "n4",
+  "That is already on your list: Permission slip."
+ ],
+ [
+  "nl1",
+  "You have 3 reminders: Call dad (today 7:00 PM) [3480]; Bring charger (tomorrow) [cc2c]; Permission slip [6bd2]"
+ ],
+ [
+  "nc1",
+  "Crossed off: Bring charger."
+ ],
+ [
+  "nc2",
+  "Error: I could not find a reminder matching 'zzz'."
+ ],
+ [
+  "nl2",
+  "You have 3 reminders: Call dad (today 7:00 PM) [3480]; Permission slip [6bd2]; Bring charger (tomorrow) [done] [cc2c]"
+ ],
+ [
+  "nview",
+  {
+   "type": "notes",
+   "notes": [
+    {
+     "id": "3480",
+     "text": "Call dad",
+     "done": false,
+     "when": "today 7:00 PM",
+     "overdue": false,
+     "timed": true
+    },
+    {
+     "id": "6bd2",
+     "text": "Permission slip",
+     "done": false,
+     "when": "",
+     "overdue": false,
+     "timed": false
+    },
+    {
+     "id": "cc2c",
+     "text": "Bring charger",
+     "done": true,
+     "when": "tomorrow",
+     "overdue": false,
+     "timed": false
+    }
+   ],
+   "upcoming": [
+    {
+     "when": "Today 4:30 PM",
+     "title": "Homework",
+     "lead": 15
+    },
+    {
+     "when": "Today 8:00 PM",
+     "title": "Physics HW",
+     "lead": 15
+    },
+    {
+     "when": "Today 9:00 PM",
+     "title": "Physics self-study",
+     "lead": 15
+    },
+    {
+     "when": "Tomorrow 4:30 PM",
+     "title": "Reading",
+     "lead": 15
+    },
+    {
+     "when": "Tomorrow 5:00 PM",
+     "title": "Piano",
+     "lead": 15
+    },
+    {
+     "when": "Tomorrow 6:00 PM",
+     "title": "Homework",
+     "lead": 15
+    }
+   ]
+  }
+ ],
+ [
+  "ndue1",
+  [
+   {
+    "key": "note|3480|2026-11-09|19:00",
+    "title": "Call dad",
+    "start": "7:00 PM",
+    "quiet": false,
+    "text": "Sir, a reminder: Call dad."
+   }
+  ]
+ ],
+ [
+  "ndue2",
+  []
+ ],
+ [
+  "nclear",
+  "Cleared 1 reminder."
+ ],
+ [
+  "nall",
+  "Cleared 2 reminders."
+ ],
+ [
+  "t1",
+  "Timer set: 25 minutes timer, done at 7:25 AM"
+ ],
+ [
+  "t2",
+  "Timer set: pasta timer, done at 7:10 AM"
+ ],
+ [
+  "t3",
+  "Error: there is already a Pasta timer. Cancel it first or pick another name."
+ ],
+ [
+  "tl",
+  "pasta timer: 10 minutes left; 25 minutes timer: 25 minutes left"
+ ],
+ [
+  "tc1",
+  "Error: which one? Running: pasta timer, 25 minutes timer. Say its name, or cancel all timers."
+ ],
+ [
+  "tc2",
+  "Cancelled the pasta timer"
+ ],
+ [
+  "tc3",
+  "Cancelled the 25 minutes timer"
+ ],
+ [
+  "tc4",
+  "Error: no timers are running."
+ ],
+ [
+  "t4",
+  "Error: timers can be at most 24 hours. For later than that, add a reminder instead."
+ ],
+ [
+  "q:set a 5 minute timer",
+  "Timer set: 5 minutes timer, done at 7:05 AM, sir."
+ ],
+ [
+  "q:how long is left on my timers",
+  "5 minutes timer: 5 minutes left"
+ ],
+ [
+  "q:cancel the timer",
+  "Cancelled the 5 minutes timer, sir."
+ ],
+ [
+  "q:add an hour of chem review at 8 pm tomorrow",
+  "I could not add that. that conflicts with Homework (7:15 PM-8:45 PM) on Tue Nov 10. Free on Tue Nov 10: 6:30 AM-7:30 AM, 8:45 PM-11:00 PM."
+ ],
+ [
+  "q:remind me to email the teacher friday",
+  "Noted: Email the teacher (Fri Nov 13)."
+ ],
+ [
+  "q:what do I need to remember",
+  "You have 1 reminder: Email the teacher (Fri Nov 13)"
+ ],
+ [
+  "q:I have 2 hours of homework on saturday",
+  "Homework on Sat Nov 14 is now 120 minutes."
+ ],
+ [
+  "q:add 90 minutes of reading wherever it fits",
+  "Placed Reading on Wed Nov 11, 9:30 AM-11:00 AM."
+ ],
+ [
+  "q:clear saturday",
+  "Cleared Sat Nov 14: 1 session (Physics self-study). Goals skip these days: Homework, Physics self-study, Spanish."
+ ],
+ [
+  "q:mark next friday as a day off",
+  "Marked Fri Nov 13 as a day off (No school). I re-planned the week."
+ ],
+ [
+  "q:add something at 6: 4",
+  "I could not add that. that conflicts with Homework (4:30 PM-6:30 PM) on Mon Nov 9. Free on Mon Nov 9: 6:30 AM-7:30 AM, 10:00 PM-11:00 PM."
+ ],
+ [
+  "q:rename the 8 to 9 pm session to biology",
+  "Updated: Biology 8:00 PM-9:00 PM (2026-11-09) [1de9]."
+ ]
+]

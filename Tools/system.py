@@ -1,6 +1,6 @@
 """Everything that differs between macOS, Windows and Linux lives here, in one place.
 
-The rest of Jarvis calls these four functions and never checks the operating system itself:
+The rest of the app calls these functions and never checks the operating system itself:
 
     speak(text, voice, on_start)   say it out loud (interruptible: on_start gets the process)
     notify(text)                   a silent desktop notification
@@ -45,9 +45,9 @@ def _speech_command(text: str, voice: str) -> tuple[list[str], dict] | None:
         return (["say", "-v", voice, text] if voice else ["say", text]), {}
     if IS_WIN:
         script = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
-                  "if ($env:JARVIS_VOICE) { try { $s.SelectVoice($env:JARVIS_VOICE) } catch {} }; "
-                  "$s.Speak($env:JARVIS_TEXT)")
-        return _PS + [script], {"JARVIS_TEXT": text, "JARVIS_VOICE": voice or ""}
+                  "if ($env:IRIS_VOICE) { try { $s.SelectVoice($env:IRIS_VOICE) } catch {} }; "
+                  "$s.Speak($env:IRIS_TEXT)")
+        return _PS + [script], {"IRIS_TEXT": text, "IRIS_VOICE": voice or ""}
     for tool in ("espeak-ng", "espeak", "spd-say"):
         if _which(tool):
             return [tool, text], {}
@@ -87,7 +87,7 @@ def speak(text: str, voice: str = "", on_start=None) -> bool:
 
 
 # --- notifications -----------------------------------------------------------------------
-def notify(text: str, title: str = "Jarvis") -> None:
+def notify(text: str, title: str = "Iris") -> None:
     """A silent notification in the corner of the screen. Never raises."""
     try:
         if IS_MAC:
@@ -96,9 +96,9 @@ def notify(text: str, title: str = "Jarvis") -> None:
         elif IS_WIN:
             script = ("Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; "
                       "$n = New-Object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; "
-                      "$n.Visible = $true; $n.ShowBalloonTip(6000, $env:JARVIS_TITLE, $env:JARVIS_TEXT, 'Info'); "
+                      "$n.Visible = $true; $n.ShowBalloonTip(6000, $env:IRIS_TITLE, $env:IRIS_TEXT, 'Info'); "
                       "Start-Sleep -Seconds 7; $n.Dispose()")
-            _run(_PS + [script], {"JARVIS_TEXT": text, "JARVIS_TITLE": title}, wait=False)
+            _run(_PS + [script], {"IRIS_TEXT": text, "IRIS_TITLE": title}, wait=False)
         elif _which("notify-send"):
             _run(["notify-send", title, text], timeout=10)
     except Exception:
@@ -117,3 +117,32 @@ def app_running(script: str = "App.py") -> bool:
         return subprocess.run(["pgrep", "-f", script], capture_output=True, timeout=5).returncode == 0
     except (OSError, subprocess.SubprocessError, ValueError):
         return False
+
+# --- choosing a voice ----------------------------------------------------------------------
+def installed_voices() -> list[str]:
+    """Names of the installed voices (macOS only; [] elsewhere or if it cannot tell)."""
+    if not IS_MAC:
+        return []
+    try:
+        out = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    names = []
+    for line in out.splitlines():
+        # "Serena (Premium)    en_GB    # Hello! My name is Serena." -> "Serena (Premium)"
+        name = line.split("#")[0].rsplit(None, 1)[0].strip() if "#" in line else ""
+        if name:
+            names.append(name)
+    return names
+
+
+def pick_voice(preferences: list[str]) -> str:
+    """The first preferred voice that is installed. "" means: use the system's default voice.
+    On Windows the first preference is returned (an unknown name falls back to the default)."""
+    if IS_WIN:
+        return preferences[0] if preferences else ""
+    have = {v.lower(): v for v in installed_voices()}
+    for wanted in preferences:
+        if wanted.lower() in have:
+            return have[wanted.lower()]
+    return ""

@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "study_window": {"weekday": ["15:00", "22:00"], "weekend": ["09:00", "22:00"]},
+    "session_minutes": 60,
+    "reminders": {"lead_minutes": 15, "quiet_until": {"MO": "18:00", "WE": "18:00", "FR": "18:00", "TU": "17:00", "TH": "17:00"}}
+  },
+  "protected": [
+    {"title": "Sleep", "days": ["MO","TU","WE","TH","FR","SA","SU"], "start": "00:00", "end": "06:30"},
+    {"title": "Sleep", "days": ["MO","TU","WE","TH","FR","SA","SU"], "start": "23:00", "end": "24:00"},
+    {"title": "Dinner", "days": ["MO","TU","WE","TH","FR","SA","SU"], "start": "18:30", "end": "19:15"}
+  ],
+  "goals": [
+    {"title": "Homework", "minutes": 120, "per": "day", "days": ["MO","TU","WE","TH","SU"], "session_minutes": 120, "priority": true, "buffer_minutes": 30}
+  ],
+  "events": [
+    {"id": "s001", "title": "School", "kind": "fixed", "days": ["MO","TU","WE","TH","FR"], "start": "07:30", "end": "14:30", "school": true, "remind": false},
+    {"id": "c001", "title": "Club", "kind": "fixed", "days": ["MO","WE"], "start": "14:45", "end": "16:00", "remind": false},
+    {"id": "g001", "title": "Gym", "kind": "fixed", "days": ["TU","TH"], "start": "15:00", "end": "16:30", "remind": false}
+  ],
+  "days_off": []
+}

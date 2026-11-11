@@ -1,6 +1,9 @@
-"""Always-on wake word: say "Jarvis wake up" to launch Jarvis.
+"""Always-on wake word: say "Iris wake up" to launch the app (the name comes from Config.py).
 
-Run by launchd (see the README) or by hand:  python Wake_Jarvis.py
+While the app is closed it also delivers schedule reminders (notification + spoken line), so a
+reminder still reaches you when the window is not open. While the app runs, the app does that.
+
+Run by launchd (see the README) or by hand:  python Wake.py
 """
 import os
 import re
@@ -12,9 +15,12 @@ import numpy as np
 import pyaudio
 from faster_whisper import WhisperModel
 
+import Config
+from Tools import reminders, system
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-PHRASE = "jarviswakeup"      # compared with spaces/punctuation stripped
+PHRASES = Config.wake_phrases()   # e.g. {"iriswakeup", "irishwakeup", ...}, spaces/punctuation stripped
 RATE = 16000
 CHUNK_SEC = 2
 THRESHOLD = 0.01             # tune: print(volume) while quiet vs talking
@@ -35,18 +41,19 @@ def heard_phrase(audio) -> bool:
     text = "".join(s.text for s in segments)
     if DEBUG:
         print(f"heard: {text!r}")
-    return PHRASE in re.sub(r"[^a-z]", "", text.lower())
+    heard = re.sub(r"[^a-z]", "", text.lower())
+    return any(p in heard for p in PHRASES)
 
 
 def wake() -> None:
-    # Only launch if Jarvis isn't already running.
-    running = subprocess.run(["pgrep", "-f", "App.py"], capture_output=True).returncode == 0
-    if not running:
+    # Only launch if the app isn't already running.
+    if not system.app_running("App.py"):
         subprocess.Popen([sys.executable, os.path.join(HERE, "App.py")], cwd=HERE)
     time.sleep(10)           # cooldown so one phrase doesn't trigger twice
 
 
-print("Listening for 'Jarvis wake up'...")
+reminders.start(only_when_app_closed=True)
+print(f"Listening for '{Config.NAME} wake up'...")
 previous = np.zeros(0, dtype=np.float32)
 
 while True:

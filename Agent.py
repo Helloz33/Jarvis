@@ -1,3 +1,9 @@
+"""The agent: builds the prompt, runs the model's tool-calling loop, and remembers the turn.
+
+    ToolSchemas.py  the tools the model may call (TOOLS) and the function behind each (FUNCTIONS)
+    QuickPaths.py   common requests handled directly by rules, before the model is asked
+    Config.py       the model, name, voice and other settings
+"""
 from __future__ import annotations
 
 import json
@@ -5,630 +11,28 @@ import re
 import threading
 from typing import Any
 
-import os
-
 import ollama
-from dotenv import load_dotenv
 
-load_dotenv()  # reads .env in the current directory, if present
-
+import Config
 import Llm
 import Memory
-from Personality import (
-    PERSONA,
-    PHRASE_PROMPT,
-    build_system_prompt,
-    search_announcement,
-)
-from Tools.notes import parse_note_request
-from Tools.timers import cancel_timer, list_timers, parse_timer_request, set_timer
-from Tools.schedule import (
-    find_rename_target,
-    is_confirmation,
-    parse_add_request,
-    parse_clear_request,
-    parse_day_off_request,
-    parse_homework_request,
-    parse_place_request,
-    sounds_like_add,
-)
+import QuickPaths
+from Personality import build_system_prompt, search_announcement
+from QuickPaths import phrase as _phrase
+from QuickPaths import quick_reply
+from ToolSchemas import FUNCTIONS, TOOLS
 from Tools import (
     SANDBOX,
     UNTRUSTED_TOOLS,
-    add_event,
-    add_note,
-    adjust_homework,
-    clear_day,
-    clear_notes,
-    complete_note,
-    create_file,
-    delete_event,
-    delete_file,
-    edit_file,
-    forget,
-    get_time,
-    list_files,
-    list_notes,
-    list_schedule,
     listen,
     mark_untrusted,
     now_line,
-    place_event,
-    plan_week,
-    read_file,
-    recall,
-    remember,
     reset_untrusted,
-    run_python,
-    set_day_off,
-    set_goal,
     speak,
-    update_event,
-    web_search,
 )
 
-# Change the model here, or without editing code: JARVIS_MODEL=qwen3:8b in .env
-MODEL = os.getenv("JARVIS_MODEL", "qwen3.5:9b")
+MODEL = Config.MODEL
 MAX_TOOL_CALLS = 8
-PERSONA_ON_WRITES = True   # one extra short model call so write results sound like Jarvis
-
-
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "list_files",
-            "description": "List files and directories inside Test/.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "Read a text file inside Test/. Use a relative path.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_file",
-            "description": (
-                "Create a new text file inside Test/. "
-                "Never overwrite an existing file."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                    },
-                    "content": {
-                        "type": "string",
-                    },
-                },
-                "required": ["path", "content"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "edit_file",
-            "description": (
-                "Replace the contents of an existing text file inside Test/."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                    },
-                    "content": {
-                        "type": "string",
-                    },
-                },
-                "required": ["path", "content"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_file",
-            "description": (
-                "Delete a file inside Test/. "
-                "Always ask the user for confirmation."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "run_python",
-            "description": (
-                "Run an existing .py file inside Test/ and return its exit "
-                "code, stdout, and stderr."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                    },
-                    "args": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                        },
-                        "description": (
-                            "Optional command-line arguments to pass to "
-                            "the script."
-                        ),
-                    },
-                    "timeout": {
-                        "type": "integer",
-                        "description": (
-                            "Optional timeout in seconds (default 10)."
-                        ),
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "web_search",
-            "description": (
-                "Search the internet for current or external information. "
-                "Use this when the user asks for web research, documentation, "
-                "news, current information, or information that may not be "
-                "available in the model's knowledge."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": (
-                            "The search query to send to the web."
-                        ),
-                    },
-                },
-                "required": ["query"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_time",
-            "description": (
-                "Get the current date and time. The user's local time is "
-                "already in your instructions, so only use this for a time "
-                "in a DIFFERENT place, with an IANA time zone name such as "
-                "'America/Los_Angeles' or 'Asia/Tokyo'."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "timezone": {
-                        "type": "string",
-                        "description": "IANA time zone name. Optional.",
-                    },
-                },
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "list_schedule",
-            "description": (
-                "Show the user's schedule for a day or a range of days "
-                "(up to 14). Use for 'what's my day/week like'. Dates: "
-                "YYYY-MM-DD, today, tomorrow or a weekday name."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "start_date": {"type": "string", "description": "First day. Default today."},
-                    "end_date": {"type": "string", "description": "Last day. Default same as start."},
-                },
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "add_event",
-            "description": (
-                "Add something to the schedule. One-off: give date. "
-                "Repeating weekly: give repeat_days such as 'mon,wed,fri' "
-                "(date then optionally sets the first day). kind is "
-                "'flexible' normally, or 'fixed' for classes, school, work "
-                "and other mandatory commitments. Fails with a clear reason "
-                "if it overlaps something; then offer the free times it lists."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "start": {"type": "string", "description": "e.g. 15:00 or 3 pm"},
-                    "end": {"type": "string", "description": "e.g. 16:30 or 4:30 pm"},
-                    "duration_minutes": {"type": "integer", "description": "Use instead of end, e.g. 60 for an hour."},
-                    "date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday. Default today."},
-                    "repeat_days": {"type": "string"},
-                    "kind": {"type": "string", "enum": ["flexible", "fixed"]},
-                    "until": {"type": "string", "description": "Last day of a repeating event."},
-                },
-                "required": ["title", "start"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "place_event",
-            "description": (
-                "Add one or more flexible events and let the schedule pick the "
-                "times. Use this whenever the user does NOT give a clock time: "
-                "'add 2 hours of test prep, one for math and one for chem', "
-                "'a 1-hour session after my club', 'find time for a chem quiz "
-                "review'. Use add_event only when they say a time."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "minutes": {"type": "integer", "description": "Length of each session, e.g. 60."},
-                    "count": {"type": "integer", "description": "How many sessions with this title."},
-                    "titles": {"type": "string", "description": "Several different sessions at once, separated by ';', e.g. 'Math test prep;Chem test prep'."},
-                    "day": {"type": "string", "description": "A weekday, YYYY-MM-DD, today or tomorrow. Leave empty to spread over this week."},
-                    "after": {"type": "string", "description": "Name of an event to sit right after, e.g. club."},
-                    "before": {"type": "string", "description": "Name of an event to end right before, e.g. dinner."},
-                    "within": {"type": "string", "enum": ["this week", "next week"]},
-                },
-                "required": [],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "clear_day",
-            "description": (
-                "Empty a day or several days: remove the flexible sessions "
-                "(homework, physics, test prep...) there and stop the planner "
-                "putting those goals back on those days. what = names separated "
-                "by ';' or empty for everything flexible. School, club and gym "
-                "are never touched. Use this for 'remove everything on Monday'."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "start_date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday."},
-                    "end_date": {"type": "string", "description": "Last day, if more than one."},
-                    "what": {"type": "string", "description": "e.g. 'homework;physics'. Empty = everything flexible."},
-                },
-                "required": ["start_date"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "set_timer",
-            "description": "Start a countdown timer: 'set a 25 minute timer', 'pasta timer for 10 minutes'. Not for clock times (use add_note for 'remind me at 5').",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "minutes": {"type": "number", "description": "Length in minutes (1.5 = 90 seconds)."},
-                    "seconds": {"type": "number", "description": "Extra seconds. Optional."},
-                    "label": {"type": "string", "description": "Optional name, e.g. pasta."},
-                },
-                "required": ["minutes"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "cancel_timer",
-            "description": "Cancel a running timer by its name, or all timers.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "timer": {"type": "string", "description": "The timer's name, e.g. pasta. Empty if only one is running."},
-                    "all_timers": {"type": "boolean", "description": "true to cancel every timer."},
-                },
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "list_timers",
-            "description": "Running timers and how much time each has left.",
-            "parameters": {"type": "object", "properties": {}},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "add_note",
-            "description": (
-                "Save a reminder note for the REMINDERS tab: 'remind me to bring "
-                "my charger tomorrow', 'don't let me forget the permission slip'. "
-                "date and time are optional; with a time the user is alerted then."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string", "description": "What to remember, e.g. bring my charger."},
-                    "date": {"type": "string", "description": "today, tomorrow, a weekday or YYYY-MM-DD. Optional."},
-                    "time": {"type": "string", "description": "e.g. 7 pm. Optional."},
-                },
-                "required": ["text"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "list_notes",
-            "description": "Read the user's open reminder notes (the REMINDERS tab).",
-            "parameters": {"type": "object", "properties": {}},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "complete_note",
-            "description": "Cross a reminder note off (or remove it with remove=true). note = its id or a few of its words.",
-            "parameters": {
-                "type": "object",
-                "properties": {"note": {"type": "string"}, "remove": {"type": "boolean"}},
-                "required": ["note"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "clear_notes",
-            "description": "Remove crossed-off reminder notes (done_only=true, default) or every note (done_only=false, asks first).",
-            "parameters": {"type": "object", "properties": {"done_only": {"type": "boolean"}}},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "update_event",
-            "description": (
-                "Change a scheduled event: move it, rename it or change its "
-                "length. event_id comes from list_schedule (or the exact "
-                "title). Only pass the fields that change. Changing a fixed "
-                "event asks the user first."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "event_id": {"type": "string"},
-                    "title": {"type": "string"},
-                    "date": {"type": "string"},
-                    "start": {"type": "string"},
-                    "end": {"type": "string"},
-                    "repeat_days": {"type": "string"},
-                    "until": {"type": "string"},
-                },
-                "required": ["event_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_event",
-            "description": (
-                "Delete a scheduled event by id (from list_schedule) or "
-                "exact title. Deleting a fixed event asks the user first."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {"event_id": {"type": "string"}},
-                "required": ["event_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "set_goal",
-            "description": (
-                "Set a recurring time goal such as homework or study, e.g. "
-                "title 'Homework', minutes 120, per 'day'; or 'Physics "
-                "self-study', 120, per 'week'. minutes=0 removes the goal. "
-                "After changing goals, call plan_week."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "minutes": {"type": "integer"},
-                    "per": {"type": "string", "enum": ["day", "week"]},
-                    "session_minutes": {"type": "integer", "description": "Longest single session."},
-                    "days": {"type": "string", "description": "Optional, e.g. 'weekdays'."},
-                    "buffer_minutes": {"type": "integer", "description": "Start this long after the day's last fixed commitment."},
-                },
-                "required": ["title", "minutes"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "set_day_off",
-            "description": (
-                "Mark a day or range of days as off school (holiday, break, "
-                "snow day). School is skipped on those days. remove=true "
-                "undoes it. Afterwards call plan_week."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "start_date": {"type": "string", "description": "e.g. 2026-11-26 or 'friday'."},
-                    "end_date": {"type": "string", "description": "Last day off, if more than one."},
-                    "title": {"type": "string", "description": "e.g. 'Thanksgiving break'."},
-                    "remove": {"type": "boolean"},
-                },
-                "required": ["start_date"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "adjust_homework",
-            "description": (
-                "Set how much homework there is on ONE day, e.g. 'I have 3 "
-                "hours of homework on Thursday' = minutes 180, date thursday; "
-                "'no homework Friday' = 0. Homework has priority: other "
-                "flexible events in the way are moved to another day. The "
-                "week is re-planned automatically."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "minutes": {"type": "integer"},
-                    "date": {"type": "string", "description": "YYYY-MM-DD, today, tomorrow or a weekday. Default today."},
-                },
-                "required": ["minutes"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "plan_week",
-            "description": (
-                "Fit all the user's goals (homework, study, test prep) into "
-                "the free time of a week. Replaces the earlier automatic "
-                "plan for that week. start_date is any day in the week; "
-                "default is this week."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {"start_date": {"type": "string"}},
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "remember",
-            "description": (
-                "Save one short fact about the user to long-term memory. Use "
-                "when the user asks you to remember something or states a "
-                "lasting fact or preference. Set permanent=true only for core "
-                "facts (name, job, main projects); it asks the user first."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "fact": {"type": "string"},
-                    "permanent": {"type": "boolean"},
-                },
-                "required": ["fact"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "recall",
-            "description": (
-                "Search long-term memory. Use when the user asks what you "
-                "know or remember, or to find a memory id."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {"query": {"type": "string"}},
-                "required": ["query"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "forget",
-            "description": (
-                "Delete one memory by its id (from recall). Asks the user "
-                "for confirmation. Only when the user asks to forget."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {"memory_id": {"type": "string"}},
-                "required": ["memory_id"],
-            },
-        },
-    },
-]
-
-
-FUNCTIONS = {
-    "list_files": list_files,
-    "read_file": read_file,
-    "create_file": create_file,
-    "edit_file": edit_file,
-    "delete_file": delete_file,
-    "run_python": run_python,
-    "web_search": web_search,
-    "get_time": get_time,
-    "list_schedule": list_schedule,
-    "add_event": add_event,
-    "place_event": place_event,
-    "clear_day": clear_day,
-    "add_note": add_note,
-    "set_timer": set_timer,
-    "cancel_timer": cancel_timer,
-    "list_timers": list_timers,
-    "list_notes": list_notes,
-    "complete_note": complete_note,
-    "clear_notes": clear_notes,
-    "update_event": update_event,
-    "delete_event": delete_event,
-    "set_goal": set_goal,
-    "set_day_off": set_day_off,
-    "adjust_homework": adjust_homework,
-    "plan_week": plan_week,
-    "remember": remember,
-    "recall": recall,
-    "forget": forget,
-}
 
 
 # --- Spoken status ("Searching for ...") --------------------------------
@@ -661,7 +65,7 @@ _PROMISE_RE = re.compile(
 
 
 
-_SCHEDULE_TOOLS = {"add_event", "place_event", "clear_day", "add_note", "complete_note", "clear_notes", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
+_SCHEDULE_TOOLS = {"add_task", "update_task", "log_task_progress", "delete_task", "add_event", "place_event", "clear_day", "add_note", "complete_note", "clear_notes", "update_event", "delete_event", "set_goal", "set_day_off", "plan_week"}
 
 # The model says it changed the schedule ("I've added...") without calling a tool.
 _CLAIM_RE = re.compile(
@@ -672,7 +76,14 @@ _CLAIM_RE = re.compile(
 )
 
 
-def _claims_schedule_change(content: str) -> bool:
+_CHANGE_ASK = re.compile(r"\b(add|remove|delete|cancel|clear|move|reschedule|rename|schedule|book|set|drop|mark)\b", re.I)
+_BARE_OK = re.compile(r"^\W*(?:done|all\s+set|all\s+done|okay|ok|sure|got\s+it|taken\s+care\s+of|consider\s+it\s+done)"
+                      r"(?:[,.!]?\s*(?:sir|ma'am))?\W*$", re.I)
+
+
+def _claims_schedule_change(content: str, user_text: str = "") -> bool:
+    if bool(content) and _BARE_OK.match(content) and _CHANGE_ASK.search(user_text or ""):
+        return True                      # "Done." to "remove the essay" without calling a tool
     return bool(content) and len(content) < 400 and "?" not in content and bool(_CLAIM_RE.search(content))
 
 
@@ -712,206 +123,13 @@ def _calls_from_content(content: str) -> list:
     return []
 
 
-def _quick_schedule(user_text: str) -> str | None:
-    """Plain 'add ... at 3 pm' requests are handled directly (see parse_add_request)."""
-    try:
-        previous = next((m["content"] for m in reversed(Memory.history.messages())
-                         if m.get("role") == "user"), "")
-    except Exception:
-        previous = ""
-    noted = _quick_notes(user_text)
-    if noted:
-        return noted
-    off = _quick_dayoff(user_text, previous)
-    if off:
-        return off
-    cleared = _quick_clear(user_text)
-    if cleared:
-        return cleared
-    placed = _quick_place(user_text)
-    if placed:
-        return placed
-    try:
-        args = parse_add_request(user_text, previous)
-    except Exception:
-        return None
-    if not args:
-        other = _quick_homework(user_text) or _quick_rename(user_text)
-        if other:
-            return other
-        if sounds_like_add(user_text):
-            return ("I could not make out the time. Say it in one go, for example: "
-                    "add a study session from 6:10 to 6:40 PM.")
-        return None
-    result = FUNCTIONS["add_event"](**args)
-    if not isinstance(result, str):
-        return None
-    if result.startswith("Added"):
-        return _phrase(result)
-    if result.startswith("Error: that conflicts with " + args["title"]):
-        return f"{args['title']} is already on your schedule, sir."
-    return "I could not add that. " + result.removeprefix("Error: ")
-
-
-def _quick_timer(user_text: str) -> str | None:
-    """'set a 25 minute timer', 'cancel the pasta timer', 'how long is left?' -> handled directly."""
-    try:
-        parsed = parse_timer_request(user_text)
-    except Exception:
-        return None
-    if not parsed:
-        return None
-    if parsed["action"] == "set":
-        result = FUNCTIONS["set_timer"](minutes=parsed["seconds"] / 60, label=parsed["label"])
-    elif parsed["action"] == "cancel":
-        result = FUNCTIONS["cancel_timer"](timer=parsed["timer"], all_timers=parsed["all"])
-    else:
-        return str(FUNCTIONS["list_timers"]())
-    result = str(result)
-    if result.startswith("Error: "):
-        return result.removeprefix("Error: ")
-    return result + ", sir."
-
-
-def _quick_notes(user_text: str) -> str | None:
-    """'remind me to bring my charger tomorrow', 'cross off the charger', 'what do I need to
-    remember?' -> the Reminders tab, handled directly."""
-    try:
-        parsed = parse_note_request(user_text)
-    except Exception:
-        return None
-    if not parsed:
-        return None
-    action = parsed["action"]
-    if action == "add":
-        result = FUNCTIONS["add_note"](text=parsed["text"], date=parsed["date"], time=parsed["time"])
-    elif action == "done":
-        result = FUNCTIONS["complete_note"](note=parsed["note"])
-    elif action == "delete":
-        result = FUNCTIONS["complete_note"](note=parsed["note"], remove=True)
-    elif action == "clear":
-        result = FUNCTIONS["clear_notes"](done_only=parsed["done_only"])
-    else:
-        result = FUNCTIONS["list_notes"]()
-    result = str(result)
-    if result.startswith("Error:"):
-        return "I could not do that. " + result.removeprefix("Error: ")
-    if action == "list":
-        return _speak_list(result)
-    return result
-
-
-def _speak_list(result: str) -> str:
-    """Drop the [ids] from a list_notes line so it reads well aloud."""
-    return re.sub(r"\s*\[[0-9a-f]{4}\]", "", result)
-
-
-def _quick_clear(user_text: str) -> str | None:
-    """'remove all items on the Monday schedule' -> clear_day, handled directly."""
-    try:
-        parsed = parse_clear_request(user_text)
-    except Exception:
-        return None
-    if not parsed:
-        return None
-    done, declined, failed = [], False, []
-    for start, end in parsed["ranges"]:
-        result = str(FUNCTIONS["clear_day"](start_date=start, end_date=end, what=parsed["what"]))
-        if result.startswith("Cleared"):
-            done.append(result)
-        elif result.startswith("There is nothing"):
-            done.append(result)
-        elif "declined" in result:
-            declined = True
-        else:
-            failed.append(result.removeprefix("Error: "))
-    if done:
-        return " ".join(done)
-    if declined:
-        return "Okay, I left your schedule as it was. Say \"do it\" if you want me to ask again."
-    return "I could not clear that. " + " ".join(failed)
-
-
-def _quick_dayoff(user_text: str, previous: str = "") -> str | None:
-    """'mark today and tomorrow as days off from school' (or a bare 'do it' after a declined
-    one) -> set_day_off, handled directly. A declined prompt is never permanent."""
-    try:
-        parsed = parse_day_off_request(previous if is_confirmation(user_text) else user_text)
-    except Exception:
-        return None
-    if not parsed:
-        return None
-    done, declined, failed = [], False, []
-    for start, end in parsed["ranges"]:
-        result = FUNCTIONS["set_day_off"](start_date=start, end_date=end, title=parsed["title"],
-                                          remove=parsed["remove"])
-        result = str(result)
-        if result.startswith(("Marked", "Removed")):
-            done.append(result.split(" Run plan_week")[0].rstrip("."))
-        elif "declined" in result:
-            declined = True
-        else:
-            failed.append(result.removeprefix("Error: "))
-    if done:
-        FUNCTIONS["plan_week"]()
-        return "; ".join(done) + ". I re-planned the week."
-    if declined:
-        return "Okay, I left your schedule as it was. Say \"do it\" if you want me to ask again."
-    return "I could not change the days off. " + " ".join(failed)
-
-
-def _quick_place(user_text: str) -> str | None:
-    """'add 2 hours of test prep ... place it how you see fit' -> place_event, handled directly."""
-    try:
-        args = parse_place_request(user_text)
-    except Exception:
-        return None
-    if not args:
-        return None
-    result = FUNCTIONS["place_event"](**args)
-    if not isinstance(result, str):
-        return None
-    if result.startswith("Placed"):
-        return _phrase(result)
-    return "I could not place that. " + result.removeprefix("Error: ")
-
-
-def _quick_homework(user_text: str) -> str | None:
-    """'I have 3 hours of homework on Thursday' / 'set homework to 90 minutes'."""
-    try:
-        parsed = parse_homework_request(user_text)
-    except Exception:
-        return None
-    if not parsed:
-        return None
-    kind, minutes, dayword = parsed
-    if kind == "day":
-        result = FUNCTIONS["adjust_homework"](minutes=minutes, date=dayword)
-    else:
-        FUNCTIONS["set_goal"](title="Homework", minutes=minutes, per="day", buffer_minutes=0)
-        result = f"Homework is now {minutes} minutes a day.\n" + str(FUNCTIONS["plan_week"]())
-    if not isinstance(result, str) or result.startswith("Error"):
-        return "I could not change the homework. " + str(result).removeprefix("Error: ")
-    first = result.splitlines()[0]
-    moved = next((l for l in result.splitlines() if l.startswith("Moved to make room")), "")
-    return first + (" " + moved.replace("Moved to make room for homework: ", "I moved ") + "." if moved else "")
-
-
-def _quick_rename(user_text: str) -> str | None:
-    """'name that session calculus' -> update_event, handled directly."""
-    try:
-        found = find_rename_target(user_text)
-    except Exception:
-        return None
-    if found is None:
-        return None
-    if isinstance(found, str):
-        return found
-    event_id, new_title = found
-    result = FUNCTIONS["update_event"](event_id=event_id, title=new_title)
-    if isinstance(result, str) and result.startswith("Updated"):
-        return _phrase(result)
-    return "I could not rename it. " + str(result).removeprefix("Error: ")
+def plain_error(name: str, exc: Exception) -> str:
+    """A tool crashed: describe it in plain words the model can pass on, and stop it retrying."""
+    reason = " ".join(str(exc).split()) or type(exc).__name__
+    if name == "web_search":
+        return (f"Error: {reason} Tell the user plainly in one short sentence and do not try "
+                "the search again this turn.")
+    return f"Error: {name.replace('_', ' ')} did not work ({reason}). Tell the user plainly."
 
 
 def run_turn(user_text: str) -> str:
@@ -919,7 +137,7 @@ def run_turn(user_text: str) -> str:
 
     reset_untrusted()
 
-    quick = _quick_timer(user_text) or _quick_schedule(user_text)
+    quick = quick_reply(user_text)
     if quick:
         Memory.history.add_turn(user_text, quick)
         return quick
@@ -945,34 +163,6 @@ def run_turn(user_text: str) -> str:
     Memory.history.add_turn(user_text, reply)
     return reply
 
-
-def _phrase(result: str) -> str:
-    """Say a write result in Jarvis's voice. Falls back to the plain result."""
-
-    plain = result + "."
-
-    if not PERSONA_ON_WRITES:
-        return plain
-
-    try:
-        response = Llm.chat(
-            MODEL,
-            [
-                {"role": "system", "content": PERSONA},
-                {"role": "user", "content": PHRASE_PROMPT + result},
-            ],
-        )
-        text = " ".join((response.message.content or "").split())
-    except Exception:
-        return plain
-
-    # Safety net: keep the plain result if the model rambled or dropped a
-    # file name that was in the result.
-    names = re.findall(r"[\w./-]+\.\w+", result)
-    if not text or len(text) > 300 or any(n not in text for n in names):
-        return plain
-
-    return text
 
 
 def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
@@ -1008,7 +198,7 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
                 elif (
                     not sched_called
                     and not sched_nudged
-                    and _claims_schedule_change(content)
+                    and _claims_schedule_change(content, user_text)
                 ):
                     # It claimed a schedule change without calling a tool. Make it
                     # actually do it (or admit nothing changed) instead of lying.
@@ -1019,7 +209,7 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
                         "content": (
                             "You said the schedule was changed, but you did not call a tool, "
                             "so nothing changed. If I asked for a change, call add_event, "
-                            "update_event, delete_event, set_goal or set_day_off now with exact "
+                            "update_event, delete_event, delete_task, set_goal or set_day_off now with exact "
                             "values (title, date YYYY-MM-DD or 'today', start and end as HH:MM). "
                             "If something is missing, ask me one short question instead."
                         ),
@@ -1052,7 +242,7 @@ def _run_loop(messages: list[dict[str, Any]], user_text: str = "") -> str:
                     result = FUNCTIONS[name](**arguments)
 
                 except Exception as exc:
-                    result = f"Error executing {name}: {exc}"
+                    result = plain_error(name, exc)
 
                 # Outside content (web pages, files, script output) must not be
                 # able to write to memory without the user's approval.
@@ -1124,14 +314,14 @@ def check_ollama() -> bool:
     except Exception:
         print(
             f"Error: model '{MODEL}' is not installed. "
-            f"Run: ollama pull {MODEL}  (or set JARVIS_MODEL in .env)"
+            f"Run: ollama pull {MODEL}  (or set IRIS_MODEL in .env)"
         )
         return False
 
     capabilities = getattr(info, "capabilities", None)
     if capabilities and "tools" not in capabilities:
         print(
-            f"Warning: '{MODEL}' does not list tool support, so Jarvis may "
+            f"Warning: '{MODEL}' does not list tool support, so {Config.NAME} may "
             "not be able to use its tools with it."
         )
 
@@ -1157,11 +347,11 @@ def save_session(wait: bool = False) -> None:
 
 
 def main() -> None:
-    """Start the interactive Jarvis terminal."""
+    """Start the interactive terminal version."""
 
     SANDBOX.mkdir(parents=True, exist_ok=True)
 
-    print("Jarvis V0.6")
+    print(f"{Config.NAME} (terminal)")
     print(f"Model:   {MODEL}")
     print(f"Sandbox: {SANDBOX}")
     print(
@@ -1181,7 +371,7 @@ def main() -> None:
                 user_text = listen()
 
                 if not user_text:
-                    print("Jarvis: Didn't catch that, try again.")
+                    print(f"{Config.NAME}: Didn't catch that, try again.")
                     continue
 
                 print(f"You (voice): {user_text}")
@@ -1193,7 +383,7 @@ def main() -> None:
             break
         except RuntimeError as exc:
             # listen() raises this if the mic/service itself is unreachable.
-            print(f"Jarvis error: {exc}")
+            print(f"{Config.NAME} error: {exc}")
             continue
 
         if user_text.lower() == "voice" and not voice_mode:
@@ -1214,11 +404,11 @@ def main() -> None:
 
         try:
             reply = run_turn(user_text)
-            print(f"Jarvis: {reply}")
+            print(f"{Config.NAME}: {reply}")
             speak(reply)
 
         except Exception as exc:
-            print(f"Jarvis error: {exc}")
+            print(f"{Config.NAME} error: {exc}")
 
 
 if __name__ == "__main__":

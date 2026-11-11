@@ -4,22 +4,33 @@ from .web_search import web_search
 
 from .clock import get_time, now_line
 
-from .schedule import (
+from . import reminders
+
+from .schedule_tools import (
     add_event,
+    add_task,
+    delete_task,
+    list_tasks,
+    log_task_progress,
+    update_task,
+    add_note,
     adjust_homework,
+    cancel_timer,
     clear_day,
+    clear_notes,
+    complete_note,
     delete_event,
+    list_notes,
     list_schedule,
+    list_timers,
+    notes_view,
     place_event,
     plan_week,
     set_day_off,
     set_goal,
+    set_timer,
     update_event,
 )
-
-from . import reminders
-
-from .notes import add_note, clear_notes, complete_note, list_notes, notes_view
 
 from .speech_to_text import listen
 
@@ -70,6 +81,14 @@ __all__ = [
     "complete_note",
     "clear_notes",
     "notes_view",
+    "set_timer",
+    "cancel_timer",
+    "list_timers",
+    "add_task",
+    "list_tasks",
+    "update_task",
+    "log_task_progress",
+    "delete_task",
     "adjust_homework",
     "clear_day",
     "place_event",

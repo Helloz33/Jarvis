@@ -3,13 +3,21 @@ from __future__ import annotations
 import difflib
 from pathlib import Path
 
-# Jarvis/Tools/filesystem.py -> parent is Jarvis/Tools -> parent.parent is Jarvis/
-ROOT = Path(__file__).resolve().parent.parent
-SANDBOX = (ROOT / "Test").resolve()
+import paths
 
-# Folders Jarvis may READ (never write) outside Test/. Edits go through the
-# schedule/memory tools, which ask permission and keep the files valid.
-READ_ONLY = {"schedule_data": (ROOT / "Schedule_data").resolve()}
+
+def _name() -> str:
+    import Config
+    return Config.NAME
+
+ROOT = paths.ROOT
+SANDBOX = paths.SANDBOX
+
+
+def _read_only() -> dict:
+    """Folders the assistant may READ (never write) outside Test/. Edits go through the
+    schedule/memory tools, which ask permission and keep the files valid."""
+    return {"schedule_data": paths.SCHEDULE_DIR.resolve()}
 
 
 # --- Confirmation hook -------------------------------------------------
@@ -28,7 +36,7 @@ def _confirm(action: str, relative: str, detail: str = "") -> bool:
     if _confirm_handler is not None:
         return bool(_confirm_handler(action, relative, detail))
     answer = input(
-        f'Jarvis wants to {action} "Test/{relative}". Continue? [y/N]: '
+        f'{_name()} wants to {action} "Test/{relative}". Continue? [y/N]: '
     ).strip().lower()
     return answer in {"y", "yes"}
 
@@ -37,7 +45,7 @@ def ask_permission(action: str, target: str, detail: str = "") -> bool:
     """Generic Yes/No permission for non-file actions (e.g. forgetting a memory)."""
     if _confirm_handler is not None:
         return bool(_confirm_handler(action, target, detail))
-    answer = input(f'Jarvis wants to {action}: {target}. Continue? [y/N]: ').strip().lower()
+    answer = input(f'{_name()} wants to {action}: {target}. Continue? [y/N]: ').strip().lower()
     return answer in {"y", "yes"}
 
 
@@ -84,7 +92,7 @@ def list_files() -> str:
         for path in sorted(SANDBOX.iterdir(), key=lambda p: p.name.lower()):
             kind = "dir" if path.is_dir() else "file"
             items.append(f"{kind}: {path.name}")
-        for name, folder in READ_ONLY.items():
+        for name, folder in _read_only().items():
             if folder.is_dir():
                 for path in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
                     items.append(f"read-only file: {name}/{path.name}")
@@ -96,10 +104,11 @@ def list_files() -> str:
 def read_file(path: str) -> str:
     """Read a UTF-8 text file inside Test/."""
     try:
-        first = Path(str(path).replace("\\", "/")).parts[:1]
-        if first and first[0] in READ_ONLY:
-            base = READ_ONLY[first[0]]
-            target = (ROOT / path).resolve(strict=False)
+        parts = Path(str(path).replace("\\", "/")).parts
+        read_only = _read_only()
+        if parts and parts[0].lower() in read_only:
+            base = read_only[parts[0].lower()]
+            target = (base.joinpath(*parts[1:])).resolve(strict=False)
             try:
                 target.relative_to(base)
             except ValueError:

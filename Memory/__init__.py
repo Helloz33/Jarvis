@@ -1,4 +1,4 @@
-"""Jarvis long-term memory (V0.5).
+"""Long-term memory (V0.5).
 
 Layers:
   1. history      - last few turns of this conversation (short-term)
@@ -12,6 +12,8 @@ import json
 import os
 import threading
 import time
+
+import paths
 
 from . import embeddings, store
 from .history import History
@@ -57,7 +59,7 @@ def forget(memory_id: str) -> bool:
 def context_for(user_text: str) -> tuple[str, list[str]]:
     """Return (profile text, memory lines) for this user message.
 
-    With a small store every memory goes into the prompt, so Jarvis uses them
+    With a small store every memory goes into the prompt, so the assistant uses them
     naturally without being asked. Once the store grows, only the closest
     matches (by meaning) are included.
     """
@@ -93,11 +95,11 @@ _summary_lock = threading.Lock()
 
 
 def _session_file():
-    return store.DATA_DIR / "session_current.json"
+    return paths.MEMORY_DIR / "session_current.json"
 
 
 def _pending_dir():
-    return store.DATA_DIR / "sessions_pending"
+    return paths.MEMORY_DIR / "sessions_pending"
 
 
 def _write_json(path, data) -> None:

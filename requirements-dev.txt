@@ -1,0 +1,4 @@
+# Extra packages for running the tests in tests/:  pip install -r requirements-dev.txt
+-r requirements.txt
+freezegun
+httpx

@@ -1,4 +1,4 @@
-"""Disk storage for Jarvis's long-term memory.
+"""Disk storage for the assistant's long-term memory.
 
 Two files live in memory_data/ (gitignored, personal):
   profile.md      - short, curated facts that go in EVERY prompt
@@ -13,10 +13,15 @@ import time
 import uuid
 from pathlib import Path
 
-# Jarvis/Memory/store.py -> parent.parent is Jarvis/
-DATA_DIR = Path(__file__).resolve().parent.parent / "memory_data"
-PROFILE_FILE = DATA_DIR / "profile.md"
-MEMORIES_FILE = DATA_DIR / "memories.jsonl"
+import paths
+
+
+def _profile_file() -> Path:
+    return paths.MEMORY_DIR / "profile.md"
+
+
+def _memories_file() -> Path:
+    return paths.MEMORY_DIR / "memories.jsonl"
 
 PROFILE_WORD_CAP = 500      # the profile is sent every turn, so keep it small
 MAX_FACT_CHARS = 300        # one memory = one short fact
@@ -25,13 +30,13 @@ _lock = threading.RLock()
 
 
 def _ensure_dir() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    paths.MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # --- profile ----------------------------------------------------------------
 def read_profile() -> str:
     try:
-        return PROFILE_FILE.read_text(encoding="utf-8").strip()
+        return _profile_file().read_text(encoding="utf-8").strip()
     except OSError:
         return ""
 
@@ -51,7 +56,7 @@ def append_profile(fact: str) -> str | None:
                 "Ask the user to trim memory_data/profile.md first."
             )
         _ensure_dir()
-        with PROFILE_FILE.open("a", encoding="utf-8") as fh:
+        with _profile_file().open("a", encoding="utf-8") as fh:
             fh.write(("\n" if current else "") + f"- {fact}")
     return None
 
@@ -61,7 +66,7 @@ def load_memories() -> list[dict]:
     items: list[dict] = []
     with _lock:
         try:
-            lines = MEMORIES_FILE.read_text(encoding="utf-8").splitlines()
+            lines = _memories_file().read_text(encoding="utf-8").splitlines()
         except OSError:
             return items
     for line in lines:
@@ -79,11 +84,11 @@ def load_memories() -> list[dict]:
 
 def _write_all(items: list[dict]) -> None:
     _ensure_dir()
-    tmp = MEMORIES_FILE.with_suffix(".tmp")
+    tmp = _memories_file().with_suffix(".tmp")
     with tmp.open("w", encoding="utf-8") as fh:
         for entry in items:
             fh.write(json.dumps(entry) + "\n")
-    os.replace(tmp, MEMORIES_FILE)        # atomic: never leaves a half-written file
+    os.replace(tmp, _memories_file())        # atomic: never leaves a half-written file
 
 
 def add_memory(text: str, source: str, embedding: list[float] | None) -> dict | None:
@@ -101,7 +106,7 @@ def add_memory(text: str, source: str, embedding: list[float] | None) -> dict | 
             "embedding": embedding,
         }
         _ensure_dir()
-        with MEMORIES_FILE.open("a", encoding="utf-8") as fh:
+        with _memories_file().open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry) + "\n")
     return entry
 
